@@ -44,7 +44,11 @@ namespace {
     std::vector<std::string>
     commandArguments(int argc, char* argv[])
     {
-        return { argv, argc + argv };
+        // Initialise vector<> from range implied by pair of (begin,end)
+        // iterators.  We don't need POSIX guarantee that
+        //
+        //     argv[argc] == nullptr
+        return { argv, argv + argc };
     }
 
     bool isFile(const boost::filesystem::path& p)
