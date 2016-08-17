@@ -54,7 +54,6 @@ bin/
 lib/
 Doxyfile
 Documentation/html
-dune.module
 *.pc
 install_manifest.txt
 
