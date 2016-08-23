@@ -417,6 +417,11 @@ ECL::loadNNC(const ecl_grid_type* G,
         ecl_nnc_export(G, init, nncData.data());
     }
 
+    std::sort(nncData.begin(), nncData.end(),
+              [](const ecl_nnc_type& nd1, const ecl_nnc_type& nd2) {
+                  return nd1.nnc_index < nd2.nnc_index;
+              });
+
     return nncData;
 }
 
