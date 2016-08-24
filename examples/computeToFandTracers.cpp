@@ -120,6 +120,16 @@ namespace {
         return cmd_args[3];
     }
 
+    int
+    stepNumber(const std::vector<std::string>& cmd_args)
+    {
+        if (cmd_args.size() < 5) {
+            return 0;
+        }
+
+        return std::stoi(cmd_args[4]);
+    }
+
     Opm::FlowDiagnostics::ConnectionValues
     extractFluxField(/* mutable */ Opm::ECLGraph& G,
                      const int                    step)
@@ -161,7 +171,7 @@ namespace {
     }
 
     Opm::FlowDiagnostics::Toolbox
-    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G)
+    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G, const int step)
     {
         const auto connGraph = Opm::FlowDiagnostics::
             ConnectivityGraph{ static_cast<int>(G.numCells()),
@@ -174,7 +184,7 @@ namespace {
         auto tool = FDT{ connGraph };
 
         tool.assign(PVol{ G.poreVolume() })
-            .assign(Flux{ extractFluxField(G, 0) });
+            .assign(Flux{ extractFluxField(G, step) });
 
         return tool;
     }
@@ -192,7 +202,18 @@ try {
 
     graph.assignFluxDataSource(restartFile(cmd_args));
 
-    auto fdTool = initialiseFlowDiagnostics(graph);
+    auto fdTool = initialiseFlowDiagnostics(graph, stepNumber(cmd_args));
+
+    // Solve for time of flight.
+    using FDT = Opm::FlowDiagnostics::Toolbox;
+    std::vector<Opm::FlowDiagnostics::CellSet> start;
+    auto sol = fdTool.computeInjectionDiagnostics(FDT::StartCells{start});
+    const auto& tof = sol.fd.timeOfFlight();
+
+    // Write it to standard out.
+    for (double t : tof) {
+        std::cout << t << '\n';
+    }
 }
 catch (const std::exception& e) {
     std::cerr << "Caught exception: " << e.what() << '\n';
