@@ -419,7 +419,7 @@ ECL::loadNNC(const ecl_grid_type* G,
 
     std::sort(nncData.begin(), nncData.end(),
               [](const ecl_nnc_type& nd1, const ecl_nnc_type& nd2) {
-                  return nd1.nnc_index < nd2.nnc_index;
+                  return nd1.input_index < nd2.input_index;
               });
 
     return nncData;
