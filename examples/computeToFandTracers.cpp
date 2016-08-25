@@ -42,6 +42,42 @@
 #include <boost/filesystem.hpp>
 
 namespace {
+    bool isFile(const boost::filesystem::path& p)
+    {
+        namespace fs = boost::filesystem;
+
+        auto is_regular_file = [](const fs::path& pth)
+        {
+            return fs::exists(pth) && fs::is_regular_file(pth);
+        };
+
+        return is_regular_file(p)
+            || (fs::is_symlink(p) &&
+                is_regular_file(fs::read_symlink(p)));
+    }
+
+    boost::filesystem::path
+    deriveFileName(boost::filesystem::path         file,
+                   const std::vector<std::string>& extensions)
+    {
+        for (const auto& ext : extensions) {
+            file.replace_extension(ext);
+
+            if (isFile(file)) {
+                return file;
+            }
+        }
+
+        const auto prefix = file.parent_path() / file.stem();
+
+        std::ostringstream os;
+
+        os << "Unable to derive valid filename from model prefix "
+           << prefix.generic_string();
+
+        throw std::invalid_argument(os.str());
+    }
+
     Opm::FlowDiagnostics::ConnectionValues
     extractFluxField(/* mutable */ Opm::ECLGraph& G,
                      const int                    step)
@@ -113,10 +149,15 @@ try {
     Opm::parameter::ParameterGroup param(argc, argv, verify_commandline_syntax, parameter_output);
 
     // Obtain filenames for grid, init and restart files, as well as step number.
-    const std::string casename = param.getDefault<std::string>("case", "DEFAULT_CASE_NAME");
-    const std::string grid = param.getDefault("grid", casename + ".EGRID");
-    const std::string init = param.getDefault("init", casename + ".INIT");
-    const std::string restart = param.getDefault("restart", casename + ".UNRST");
+    using boost::filesystem::path;
+    using std::string;
+    const string casename = param.getDefault<string>("case", "DEFAULT_CASE_NAME");
+    const path grid = param.has("grid") ? param.get<string>("grid")
+        : deriveFileName(casename, { ".EGRID", ".FEGRID", ".GRID", ".FGRID" });
+    const path init = param.has("init") ? param.get<string>("init")
+        : deriveFileName(casename, { ".INIT", ".FINIT" });
+    const path restart = param.has("restart") ? param.get<string>("restart")
+        : deriveFileName(casename, { ".UNRST", ".FUNRST" });
     const int step = param.getDefault("step", 0);
 
     // Read graph and fluxes, initialise the toolbox.
