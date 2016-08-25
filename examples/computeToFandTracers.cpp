@@ -22,6 +22,7 @@
 #include <config.h>
 #endif
 
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/flowdiagnostics/ConnectivityGraph.hpp>
@@ -41,95 +42,6 @@
 #include <boost/filesystem.hpp>
 
 namespace {
-    std::vector<std::string>
-    commandArguments(int argc, char* argv[])
-    {
-        // Initialise vector<> from range implied by pair of (begin,end)
-        // iterators.  We don't need POSIX guarantee that
-        //
-        //     argv[argc] == nullptr
-        return { argv, argv + argc };
-    }
-
-    bool isFile(const boost::filesystem::path& p)
-    {
-        namespace fs = boost::filesystem;
-
-        auto is_regular_file = [](const fs::path& pth)
-        {
-            return fs::exists(pth) && fs::is_regular_file(pth);
-        };
-
-        return is_regular_file(p)
-            || (fs::is_symlink(p) &&
-                is_regular_file(fs::read_symlink(p)));
-    }
-
-    boost::filesystem::path
-    deriveFileName(boost::filesystem::path         file,
-                   const std::vector<std::string>& extensions)
-    {
-        for (const auto& ext : extensions) {
-            file.replace_extension(ext);
-
-            if (isFile(file)) {
-                return file;
-            }
-        }
-
-        const auto prefix = file.parent_path() / file.stem();
-
-        std::ostringstream os;
-
-        os << "Unable to derive valid filename from model prefix "
-           << prefix.generic_string();
-
-        throw std::invalid_argument(os.str());
-    }
-
-    boost::filesystem::path
-    gridFile(const std::vector<std::string>& cmd_args)
-    {
-        if (cmd_args.size() < 2) {
-            throw std::invalid_argument("Must supply at least prefix "
-                                        "of ECLIPSE output dataset");
-        }
-
-        return cmd_args[1];
-    }
-
-    boost::filesystem::path
-    initFile(const std::vector<std::string>& cmd_args)
-    {
-        if (cmd_args.size() < 3) {
-            return deriveFileName(gridFile(cmd_args),
-                                  { "INIT", "FINIT" });
-        }
-
-        return cmd_args[2];
-    }
-
-    boost::filesystem::path
-    restartFile(const std::vector<std::string>& cmd_args)
-    {
-        if (cmd_args.size() < 4) {
-            return deriveFileName(gridFile(cmd_args),
-                                  { "UNRST", "FUNRST" });
-        }
-
-        return cmd_args[3];
-    }
-
-    int
-    stepNumber(const std::vector<std::string>& cmd_args)
-    {
-        if (cmd_args.size() < 5) {
-            return 0;
-        }
-
-        return std::stoi(cmd_args[4]);
-    }
-
     Opm::FlowDiagnostics::ConnectionValues
     extractFluxField(/* mutable */ Opm::ECLGraph& G,
                      const int                    step)
@@ -190,19 +102,27 @@ namespace {
     }
 } // Anonymous namespace
 
-// Syntax:
-//   computeToFandTracers ecl_case_prefix
+// Syntax (typical):
+//   computeToFandTracers case=<ecl_case_prefix> step=<report_number>
 
 int main(int argc, char* argv[])
 try {
-    const auto cmd_args = commandArguments(argc, argv);
+    // Obtain parameters from command line (possibly specifying a parameter file).
+    const bool verify_commandline_syntax = true;
+    const bool parameter_output = false;
+    Opm::parameter::ParameterGroup param(argc, argv, verify_commandline_syntax, parameter_output);
 
-    auto graph = Opm::ECLGraph::load(gridFile(cmd_args),
-                                     initFile(cmd_args));
+    // Obtain filenames for grid, init and restart files, as well as step number.
+    const std::string casename = param.getDefault<std::string>("case", "DEFAULT_CASE_NAME");
+    const std::string grid = param.getDefault("grid", casename + ".EGRID");
+    const std::string init = param.getDefault("init", casename + ".INIT");
+    const std::string restart = param.getDefault("restart", casename + ".UNRST");
+    const int step = param.getDefault("step", 0);
 
-    graph.assignFluxDataSource(restartFile(cmd_args));
-
-    auto fdTool = initialiseFlowDiagnostics(graph, stepNumber(cmd_args));
+    // Read graph and fluxes, initialise the toolbox.
+    auto graph = Opm::ECLGraph::load(grid, init);
+    graph.assignFluxDataSource(restart);
+    auto fdTool = initialiseFlowDiagnostics(graph, step);
 
     // Solve for time of flight.
     using FDT = Opm::FlowDiagnostics::Toolbox;
