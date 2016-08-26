@@ -22,6 +22,7 @@
 #define OPM_ECLWELLSOLUTION_HEADER_INCLUDED
 
 #include <ert/ecl/ecl_file.h>
+#include <ert/util/ert_unique_ptr.hpp>
 #include <boost/filesystem.hpp>
 #include <array>
 #include <string>
@@ -37,7 +38,7 @@ namespace Opm
         using Path = boost::filesystem::path;
 
         /// Construct with path to restart file.
-        explicit ECLWellSolution(const Path& restart);
+        explicit ECLWellSolution(const Path& restart_filename);
 
         /// Contains the well data extracted from the restart file.
         struct WellData
@@ -55,11 +56,10 @@ namespace Opm
         std::vector<WellData> solution(const int occurrence);
 
     private:
-        Path restart_path_;
-        std::vector<double> loadDoubleField(ecl_file_type* restart,
-                                            const std::string& fieldname);
-        std::vector<int> loadIntField(ecl_file_type* restart,
-                                      const std::string& fieldname);
+        using FilePtr = ERT::ert_unique_ptr<ecl_file_type, ecl_file_close>;
+        FilePtr restart_;
+        std::vector<double> loadDoubleField(const std::string& fieldname);
+        std::vector<int> loadIntField(const std::string& fieldname);
     };
 
 

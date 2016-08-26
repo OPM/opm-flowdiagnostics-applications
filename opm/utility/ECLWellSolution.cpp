@@ -23,33 +23,53 @@
 #endif
 
 #include <opm/utility/ECLWellSolution.hpp>
-#include <opm/utility/ECLUtilities.hpp>
 #include <ert/ecl/ecl_kw_magic.h>
+#include <stdexcept>
+#include <sstream>
 
 namespace Opm
 {
 
-    struct EclFileSelectReportBlock
-    {
-        EclFileSelectReportBlock(ecl_file_type* file, const int number)
-            : file_(file)
+    namespace {
+
+        struct EclFileSelectReportBlock
         {
-            ecl_file_push_block(file_);
-            ecl_file_subselect_block(file_, SEQNUM_KW, number);
-        }
-        ~EclFileSelectReportBlock()
+            EclFileSelectReportBlock(ecl_file_type* file, const int number)
+                : file_(file)
+            {
+                ecl_file_push_block(file_);
+                ecl_file_subselect_block(file_, SEQNUM_KW, number);
+            }
+            ~EclFileSelectReportBlock()
+            {
+                ecl_file_pop_block(file_);
+            }
+            ecl_file_type* file_;
+        };
+
+        ERT::ert_unique_ptr<ecl_file_type, ecl_file_close>
+        load(const boost::filesystem::path& filename)
         {
-            ecl_file_pop_block(file_);
+            // Read-only, keep open between requests
+            const auto open_flags = 0;
+            using FilePtr = ERT::ert_unique_ptr<ecl_file_type, ecl_file_close>;
+            FilePtr file(ecl_file_open(filename.generic_string().c_str(), open_flags));
+            if (!file) {
+                std::ostringstream os;
+                os << "Failed to load ECL File object from '"
+                   << filename.generic_string() << '\'';
+                throw std::invalid_argument(os.str());
+            }
+            return file;
         }
-        ecl_file_type* file_;
-    };
+
+    }
 
 
 
 
-
-    ECLWellSolution::ECLWellSolution(const Path& restart)
-        : restart_path_(restart)
+    ECLWellSolution::ECLWellSolution(const Path& restart_filename)
+        : restart_(load(restart_filename))
     {
     }
 
@@ -60,10 +80,9 @@ namespace Opm
     std::vector<ECLWellSolution::WellData>
     ECLWellSolution::solution(const int occurrence)
     {
-        auto restart = ECL::loadFile(restart_path_);
-        EclFileSelectReportBlock(restart.get(), occurrence);
+        EclFileSelectReportBlock(restart_.get(), occurrence);
         {
-            auto intehead = loadIntField(restart.get(), INTEHEAD_KW);
+            auto intehead = loadIntField(INTEHEAD_KW);
             const int unit = intehead[INTEHEAD_UNIT_INDEX];
             return {};
         }
@@ -73,12 +92,11 @@ namespace Opm
 
 
     std::vector<double>
-    ECLWellSolution::loadDoubleField(ecl_file_type* restart,
-                                     const std::string& fieldname)
+    ECLWellSolution::loadDoubleField(const std::string& fieldname)
     {
         std::vector<double> field_data;
         const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
-        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart, fieldname.c_str(), local_occurrence);
+        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_data_as_double(keyword, field_data.data());
         return field_data;
@@ -88,12 +106,11 @@ namespace Opm
 
 
     std::vector<int>
-    ECLWellSolution::loadIntField(ecl_file_type* restart,
-                                  const std::string& fieldname)
+    ECLWellSolution::loadIntField(const std::string& fieldname)
     {
         std::vector<int> field_data;
         const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
-        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart, fieldname.c_str(), local_occurrence);
+        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_memcpy_int_data(keyword, field_data.data());
         return field_data;
