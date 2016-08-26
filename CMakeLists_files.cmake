@@ -1,6 +1,3 @@
-# -*- mode: cmake; tab-width: 2; indent-tabs-mode: t; truncate-lines: t; compile-command: "cmake -Wdev" -*-
-# vim: set filetype=cmake autoindent tabstop=2 shiftwidth=2 noexpandtab softtabstop=2 nowrap:
-
 # This file sets up five lists:
 #       MAIN_SOURCE_FILES     List of compilation units which will be included in
 #                             the library. If it isn't on this list, it won't be
@@ -24,16 +21,18 @@
 #                             the library needs it.
 
 list (APPEND MAIN_SOURCE_FILES
-	opm/utility/ECLGraph.cpp
-	)
+        opm/utility/ECLGraph.cpp
+        opm/utility/ECLWellSolution.cpp
+        )
 
 list (APPEND TEST_SOURCE_FILES
-	)
+        )
 
 list (APPEND EXAMPLE_SOURCE_FILES
-	examples/computeToFandTracers.cpp
-	)
+        examples/computeToFandTracers.cpp
+        )
 
 list (APPEND PUBLIC_HEADER_FILES
-	opm/utility/ECLGraph.hpp
-	)
+        opm/utility/ECLGraph.hpp
+        opm/utility/ECLWellSolution.hpp
+        )
