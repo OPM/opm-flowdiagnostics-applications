@@ -57,11 +57,9 @@ namespace Opm
     private:
         Path restart_path_;
         std::vector<double> loadDoubleField(ecl_file_type* restart,
-                                            const std::string& fieldname,
-                                            const int occurrence);
+                                            const std::string& fieldname);
         std::vector<int> loadIntField(ecl_file_type* restart,
-                                      const std::string& fieldname,
-                                      const int occurrence);
+                                      const std::string& fieldname);
     };
 
 
