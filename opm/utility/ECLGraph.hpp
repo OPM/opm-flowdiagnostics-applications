@@ -107,25 +107,21 @@ namespace Opm {
         /// The \c i-th connection is between active cells \code
         /// neighbours()[2*i + 0] \endcode and \code neighbours()[2*i + 1]
         /// \endcode.
-        const std::vector<int>& neighbours() const;
+        std::vector<int> neighbours() const;
 
         /// Retrive static pore-volume values on active cells only.
         ///
         /// Corresponds to the \c PORV vector in the INIT file, possibly
         /// restricted to those active cells for which the pore-volume is
         /// strictly positive.
-        const std::vector<double>& poreVolume() const;
+        std::vector<double> poreVolume() const;
 
         /// Retrive phase flux on all connections defined by \code
         /// neighbours() \endcode.
         ///
-        /// Non-"const" because this potentially loads new data from the
-        /// backing store into internal cache data structures.
-        ///
         /// \param[in] phase Canonical phase for which to retrive flux.
         ///
-        /// \param[in] occurrence Selected temporal vector.  Essentially the
-        ///                       report step number.
+        /// \param[in] rptstep Selected temporal vector.  Report-step ID.
         ///
         /// \return Flux values corresponding to selected phase and report
         /// step.  Empty if unavailable in the result set (e.g., by querying
@@ -134,7 +130,7 @@ namespace Opm {
         /// values are output at all).
         std::vector<double>
         flux(const BlackoilPhases::PhaseIndex phase,
-             const int                        occurrence = 0);
+             const int                        rptstep = 0) const;
 
     private:
         /// Implementation class.
