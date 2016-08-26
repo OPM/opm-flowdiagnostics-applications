@@ -30,6 +30,7 @@
 #include <opm/flowdiagnostics/Toolbox.hpp>
 
 #include <opm/utility/ECLGraph.hpp>
+#include <opm/utility/ECLWellSolution.hpp>
 
 #include <exception>
 #include <iostream>
@@ -157,6 +158,9 @@ try {
     const path restart = param.has("restart") ? param.get<string>("restart")
         : deriveFileName(casename, { ".UNRST", ".FUNRST" });
     const int step = param.getDefault("step", 0);
+
+    Opm::ECLWellSolution wsol(restart);
+    wsol.solution(step);
 
     // Read graph and fluxes, initialise the toolbox.
     auto graph = Opm::ECLGraph::load(grid, init);
