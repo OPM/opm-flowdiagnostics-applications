@@ -60,6 +60,7 @@ namespace Opm
         FilePtr restart_;
         std::vector<double> loadDoubleField(const std::string& fieldname);
         std::vector<int> loadIntField(const std::string& fieldname);
+        std::vector<std::string> loadStringField(const std::string& fieldname);
     };
 
 
