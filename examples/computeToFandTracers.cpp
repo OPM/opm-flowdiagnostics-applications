@@ -160,7 +160,7 @@ try {
     const int step = param.getDefault("step", 0);
 
     Opm::ECLWellSolution wsol(restart);
-    wsol.solution(step);
+    std::vector<Opm::ECLWellSolution::WellData> well_fluxes = wsol.solution(step);
 
     // Read graph and fluxes, initialise the toolbox.
     auto graph = Opm::ECLGraph::load(grid, init);
