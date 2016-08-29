@@ -47,7 +47,7 @@ namespace Opm
             struct Completion
             {
                 std::array<int, 3> ijk;
-                double reservoir_production_rate;
+                double reservoir_inflow_rate;
             };
             std::vector<Completion> completions;
         };

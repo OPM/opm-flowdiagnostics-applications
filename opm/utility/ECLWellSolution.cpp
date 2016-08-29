@@ -231,10 +231,12 @@ namespace Opm
                     const int icon_offset = (well*ih.ncwma + comp_index) * ih.nicon;
                     const int xcon_offset = (well*ih.ncwma + comp_index) * ih.nxcon;
                     auto& completion = wd[well].completions[comp_index];
+                    // Note: subtracting 1 from indices (Fortran -> C convention).
                     completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
                                        icon[icon_offset + ICON_J_INDEX] - 1,
                                        icon[icon_offset + ICON_K_INDEX] - 1 };
-                    completion.reservoir_production_rate = unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+                    // Note: taking the negative input, to get inflow rate.
+                    completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
                 }
             }
             return wd;
