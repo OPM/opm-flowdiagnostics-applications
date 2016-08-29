@@ -237,6 +237,9 @@ namespace Opm
         std::vector<double> field_data;
         const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
         ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
+        if (keyword == nullptr) {
+            throw std::runtime_error("Could not find field " + fieldname);
+        }
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_data_as_double(keyword, field_data.data());
         return field_data;
@@ -251,6 +254,9 @@ namespace Opm
         std::vector<int> field_data;
         const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
         ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
+        if (keyword == nullptr) {
+            throw std::runtime_error("Could not find field " + fieldname);
+        }
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_memcpy_int_data(keyword, field_data.data());
         return field_data;
@@ -265,6 +271,9 @@ namespace Opm
         std::vector<std::string> field_data;
         const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
         ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
+        if (keyword == nullptr) {
+            throw std::runtime_error("Could not find field " + fieldname);
+        }
         const int size = ecl_kw_get_size(keyword);
         field_data.resize(size);
         for (int pos = 0; pos < size; ++pos) {
