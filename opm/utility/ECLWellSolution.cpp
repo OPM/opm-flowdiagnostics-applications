@@ -41,14 +41,14 @@ namespace Opm
         {
             /// \param[in] file    ecl file to select block in.
             /// \paran[in] number  sequence number of block to choose
-            ECLRestartFileSelectReportBlock(ecl_file_type* file, const int block)
+            ECLRestartFileSelectReportBlock(ecl_file_type* file, const int report_step)
                 : file_(file)
             {
                 ecl_file_push_block(file_);
                 ecl_file_select_global(file_);
-                const bool ok = ecl_file_iselect_rstblock(file_, block);
+                const bool ok = ecl_file_select_rstblock_report_step(file_, report_step);
                 if (!ok) {
-                    throw std::runtime_error("Failed to select block " + std::to_string(block));
+                    throw std::runtime_error("Failed to select report step " + std::to_string(report_step));
                 }
             }
             ~ECLRestartFileSelectReportBlock()
@@ -189,9 +189,9 @@ namespace Opm
 
 
     std::vector<ECLWellSolution::WellData>
-    ECLWellSolution::solution(const int occurrence)
+    ECLWellSolution::solution(const int report_step)
     {
-        ECLRestartFileSelectReportBlock select(restart_.get(), occurrence);
+        ECLRestartFileSelectReportBlock select(restart_.get(), report_step);
         {
             // Read header, return if trivial.
             INTEHEAD ih(loadIntField(INTEHEAD_KW));

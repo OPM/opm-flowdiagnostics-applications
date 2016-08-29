@@ -52,8 +52,11 @@ namespace Opm
             std::vector<Completion> completions;
         };
 
-        /// Return well solution for given occurrence (time step).
-        std::vector<WellData> solution(const int occurrence);
+        /// Return well solution for given report step.
+        ///
+        /// Will throw if required data is not available for the
+        /// requested step.
+        std::vector<WellData> solution(const int report_step);
 
     private:
         using FilePtr = ERT::ert_unique_ptr<ecl_file_type, ecl_file_close>;
