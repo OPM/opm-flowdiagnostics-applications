@@ -25,6 +25,7 @@
 #include <opm/utility/ECLWellSolution.hpp>
 #include <opm/core/utility/Units.hpp>
 #include <ert/ecl/ecl_kw_magic.h>
+#include <ert/ecl_well/well_const.h>
 #include <stdexcept>
 #include <sstream>
 
@@ -88,12 +89,6 @@ namespace Opm
         // fields could be needed in the future.
         struct INTEHEAD
         {
-            // Needed magic numbers not defined by ERT.
-            enum {
-                INTEHEAD_NSWELZ_INDEX = 25,
-                INTEHEAD_NXWELZ_INDEX = 26,
-                INTEHEAD_NXCONZ_INDEX = 34
-            };
 
             // Unit codes used in INTEHEAD
             enum {
@@ -211,21 +206,11 @@ namespace Opm
             auto icon = loadIntField(ICON_KW);
             auto xcon = loadDoubleField("XCON");
 
-            // Indices for necessary items not defined in ERT.
-            // Following ERT naming convention for these.
-            enum {
-                IWEL_NCON_INDEX = 4,
-                ICON_I_INDEX = 1,
-                ICON_J_INDEX = 2,
-                ICON_K_INDEX = 3,
-                XCON_QR_INDEX = 49
-            };
-
             // Construct well data.
             std::vector<WellData> wd(ih.nwell);
             for (int well = 0; well < ih.nwell; ++well) {
                 wd[well].name = trimSpacesRight(zwel[well * ih.nzwel]);
-                const int ncon = iwel[well * ih.niwel + IWEL_NCON_INDEX];
+                const int ncon = iwel[well * ih.niwel + IWEL_CONNECTIONS_INDEX];
                 wd[well].completions.resize(ncon);
                 for (int comp_index = 0; comp_index < ncon; ++comp_index) {
                     const int icon_offset = (well*ih.ncwma + comp_index) * ih.nicon;
