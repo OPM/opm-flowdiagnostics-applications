@@ -25,6 +25,7 @@
 
 list (APPEND MAIN_SOURCE_FILES
 	opm/utility/ECLGraph.cpp
+	opm/utility/ECLUtilities.cpp
 	)
 
 list (APPEND TEST_SOURCE_FILES
