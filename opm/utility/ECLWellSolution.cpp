@@ -233,7 +233,7 @@ namespace Opm
                     completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
                                        icon[icon_offset + ICON_J_INDEX] - 1,
                                        icon[icon_offset + ICON_K_INDEX] - 1 };
-                    completion.reservoir_rate = unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+                    completion.reservoir_production_rate = unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
                 }
             }
             return wd;
