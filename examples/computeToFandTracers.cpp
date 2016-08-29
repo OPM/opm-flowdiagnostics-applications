@@ -125,14 +125,12 @@ namespace {
             ConnectivityGraph{ static_cast<int>(G.numCells()),
                                G.neighbours() };
 
-        using FDT  = Opm::FlowDiagnostics::Toolbox;
-        using PVol = FDT::PoreVolume;
-        using Flux = FDT::ConnectionFlux;
+        using FDT = Opm::FlowDiagnostics::Toolbox;
 
         auto tool = FDT{ connGraph };
 
-        tool.assign(PVol{ G.poreVolume() })
-            .assign(Flux{ extractFluxField(G, step) });
+        tool.assignPoreVolume(G.poreVolume());
+        tool.assignConnectionFlux(extractFluxField(G, step));
 
         return tool;
     }
@@ -168,7 +166,7 @@ try {
     // Solve for time of flight.
     using FDT = Opm::FlowDiagnostics::Toolbox;
     std::vector<Opm::FlowDiagnostics::CellSet> start;
-    auto sol = fdTool.computeInjectionDiagnostics(FDT::StartCells{start});
+    auto sol = fdTool.computeInjectionDiagnostics(start);
     const auto& tof = sol.fd.timeOfFlight();
 
     // Write it to standard out.
