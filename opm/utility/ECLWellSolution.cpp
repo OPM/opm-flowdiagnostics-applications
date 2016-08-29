@@ -44,8 +44,8 @@ namespace Opm
             ECLRestartFileSelectReportBlock(ecl_file_type* file, const int block)
                 : file_(file)
             {
-                // ecl_file_select_global(file_);
-                // ecl_file_push_block(file_);
+                ecl_file_push_block(file_);
+                ecl_file_select_global(file_);
                 const bool ok = ecl_file_iselect_rstblock(file_, block);
                 if (!ok) {
                     throw std::runtime_error("Failed to select block " + std::to_string(block));
@@ -53,7 +53,7 @@ namespace Opm
             }
             ~ECLRestartFileSelectReportBlock()
             {
-                // ecl_file_pop_block(file_);
+                ecl_file_pop_block(file_);
             }
             ecl_file_type* file_;
         };
@@ -191,7 +191,7 @@ namespace Opm
     std::vector<ECLWellSolution::WellData>
     ECLWellSolution::solution(const int occurrence)
     {
-        ECLRestartFileSelectReportBlock(restart_.get(), occurrence);
+        ECLRestartFileSelectReportBlock select(restart_.get(), occurrence);
         {
             // Read header, return if trivial.
             INTEHEAD ih(loadIntField(INTEHEAD_KW));
