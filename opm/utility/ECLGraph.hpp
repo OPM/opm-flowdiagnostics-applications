@@ -23,6 +23,7 @@
 
 #include <opm/core/props/BlackoilPhases.hpp>
 
+#include <array>
 #include <cstddef>
 #include <memory>
 #include <vector>
@@ -95,6 +96,22 @@ namespace Opm {
         /// \param[in] src Name of ECL restart file, possibly unified, from
         ///                which next set of phase fluxes should be retrieved.
         void assignFluxDataSource(const Path& src);
+
+        /// Retrieve active cell ID from (I,J,K) tuple in particular grid.
+        ///
+        /// \param[in] ijk Cartesian index tuple of particular cell.
+        ///
+        /// \param[in] gridID Identity of specific grid to which to relate
+        ///     the (I,J,K) tuple.  Use zero (default) for main grid and
+        ///     positive indices for any LGRs.  The (I,J,K) indices must be
+        ///     within the ranges implied by the specific grid.
+        ///
+        /// \return Active ID (relative to linear, global numbering) of cell
+        ///     (I,J,K) from specified grid.  Negative one (-1) if (I,J,K)
+        ///     outside valid range or if the specific cell identified by \p
+        ///     ijk and \p gridID is not actually active.
+        int activeCell(const std::array<int,3>& ijk,
+                       const int                gridID = 0) const;
 
         /// Retrieve number of active cells in graph.
         std::size_t numCells() const;

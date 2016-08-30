@@ -1754,6 +1754,13 @@ Opm::ECLGraph::load(const Path& grid, const Path& init)
     return { std::move(pImpl) };
 }
 
+int
+Opm::ECLGraph::activeCell(const std::array<int,3>& ijk,
+                          const int                gridID) const
+{
+    return this->pImpl_->activeCell(gridID, ijk);
+}
+
 void
 Opm::ECLGraph::assignFluxDataSource(const Path& src)
 {
