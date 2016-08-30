@@ -1077,9 +1077,6 @@ public:
     /// Retrive phase flux on all connections defined by \code neighbours()
     /// \endcode.
     ///
-    /// Non-"const" because this potentially loads new data from the backing
-    /// store into internal cache data structures.
-    ///
     /// \param[in] phase Canonical phase for which to retrive flux.
     ///
     /// \param[in] rptstep Selected temporal vector.  Report-step ID.
