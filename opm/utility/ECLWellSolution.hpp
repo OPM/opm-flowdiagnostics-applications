@@ -55,7 +55,8 @@ namespace Opm
         ///
         /// Will throw if required data is not available for the
         /// requested step.
-        std::vector<WellData> solution(const int report_step) const;
+        std::vector<WellData> solution(const int report_step,
+                                       const int num_grids) const;
 
     private:
         // Types.
@@ -69,6 +70,7 @@ namespace Opm
         std::vector<double> loadDoubleField(const std::string& fieldname) const;
         std::vector<int> loadIntField(const std::string& fieldname) const;
         std::vector<std::string> loadStringField(const std::string& fieldname) const;
+        std::vector<WellData> readWellData(const int grid_index) const;
     };
 
 

@@ -36,12 +36,13 @@ namespace Opm
 
 
 
-        /// RAII class using the ERT block selection stack mechanism.
-        struct ECLRestartFileSelectReportBlock
+        /// RAII class using the ERT block selection stack mechanism
+        /// to select a report step in a restart file.
+        struct SelectReportBlock
         {
-            /// \param[in] file    ecl file to select block in.
-            /// \paran[in] number  sequence number of block to choose
-            ECLRestartFileSelectReportBlock(ecl_file_type* file, const int report_step)
+            /// \param[in] file         ecl file to select block in.
+            /// \paran[in] report_step  sequence number of block to choose
+            SelectReportBlock(ecl_file_type* file, const int report_step)
                 : file_(file)
             {
                 if (!ecl_file_has_report_step(file_, report_step)) {
@@ -51,7 +52,29 @@ namespace Opm
                 ecl_file_select_global(file_);
                 ecl_file_select_rstblock_report_step(file_, report_step);
             }
-            ~ECLRestartFileSelectReportBlock()
+            ~SelectReportBlock()
+            {
+                ecl_file_pop_block(file_);
+            }
+            ecl_file_type* file_;
+        };
+
+
+
+
+        /// RAII class using the ERT block selection stack mechanism
+        /// to select an LGR sub-block.
+        struct SubSelectLGRBlock
+        {
+            /// \param[in] file       ecl file to select LGR block in.
+            /// \paran[in] lgr_index  sequence number of block to choose
+            SubSelectLGRBlock(ecl_file_type* file, const int lgr_index)
+                : file_(file)
+            {
+                ecl_file_push_block(file_);
+                ecl_file_subselect_block(file_, LGR_KW, lgr_index);
+            }
+            ~SubSelectLGRBlock()
             {
                 ecl_file_pop_block(file_);
             }
@@ -189,43 +212,24 @@ namespace Opm
 
 
     std::vector<ECLWellSolution::WellData>
-    ECLWellSolution::solution(const int report_step) const
+    ECLWellSolution::solution(const int report_step,
+                              const int num_grids) const
     {
-        ECLRestartFileSelectReportBlock select(restart_.get(), report_step);
+        SelectReportBlock select(restart_.get(), report_step);
         {
-            // Read header, return if trivial.
-            INTEHEAD ih(loadIntField(INTEHEAD_KW));
-            if (ih.nwell == 0) {
-                return {};
-            }
-            const double qr_unit = resRateUnit(ih.unit); 
-
-            // Read necessary keywords.
-            auto zwel = loadStringField(ZWEL_KW);
-            auto iwel = loadIntField(IWEL_KW);
-            auto icon = loadIntField(ICON_KW);
-            auto xcon = loadDoubleField("XCON");
-
-            // Construct well data.
-            std::vector<WellData> wd(ih.nwell);
-            for (int well = 0; well < ih.nwell; ++well) {
-                wd[well].name = trimSpacesRight(zwel[well * ih.nzwel]);
-                const int ncon = iwel[well * ih.niwel + IWEL_CONNECTIONS_INDEX];
-                wd[well].completions.resize(ncon);
-                for (int comp_index = 0; comp_index < ncon; ++comp_index) {
-                    const int icon_offset = (well*ih.ncwma + comp_index) * ih.nicon;
-                    const int xcon_offset = (well*ih.ncwma + comp_index) * ih.nxcon;
-                    auto& completion = wd[well].completions[comp_index];
-                    // Note: subtracting 1 from indices (Fortran -> C convention).
-                    completion.grid_index = 0; // TODO: get correct LGR grid index.
-                    completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
-                                       icon[icon_offset + ICON_J_INDEX] - 1,
-                                       icon[icon_offset + ICON_K_INDEX] - 1 };
-                    // Note: taking the negative input, to get inflow rate.
-                    completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+            // Read well data for global grid.
+            std::vector<WellData> all_wd = readWellData(0);
+            for (int grid_index = 1; grid_index < num_grids; ++grid_index) {
+                const int lgr_index = grid_index - 1;
+                SubSelectLGRBlock subselect(restart_.get(), lgr_index);
+                {
+                    // Read well data for LGR grid.
+                    std::vector<WellData> wd = readWellData(grid_index);
+                    // Append to set of all well data.
+                    all_wd.insert(all_wd.end(), wd.begin(), wd.end());
                 }
             }
-            return wd;
+            return all_wd;
         }
     }
 
@@ -284,6 +288,50 @@ namespace Opm
         return field_data;
     }
 
+
+
+
+    std::vector<ECLWellSolution::WellData>
+    ECLWellSolution::readWellData(const int grid_index) const
+    {
+        // Note: this function is expected to be called in a context
+        // where the correct restart block and grid subblock has already
+        // been selected using the ert block mechanisms.
+
+        // Read header, return if trivial.
+        INTEHEAD ih(loadIntField(INTEHEAD_KW));
+        if (ih.nwell == 0) {
+            return {};
+        }
+        const double qr_unit = resRateUnit(ih.unit);
+
+        // Read necessary keywords.
+        auto zwel = loadStringField(ZWEL_KW);
+        auto iwel = loadIntField(IWEL_KW);
+        auto icon = loadIntField(ICON_KW);
+        auto xcon = loadDoubleField("XCON");
+
+        // Create well data.
+        std::vector<WellData> wd(ih.nwell);
+        for (int well = 0; well < ih.nwell; ++well) {
+            wd[well].name = trimSpacesRight(zwel[well * ih.nzwel]);
+            const int ncon = iwel[well * ih.niwel + IWEL_CONNECTIONS_INDEX];
+            wd[well].completions.resize(ncon);
+            for (int comp_index = 0; comp_index < ncon; ++comp_index) {
+                const int icon_offset = (well*ih.ncwma + comp_index) * ih.nicon;
+                const int xcon_offset = (well*ih.ncwma + comp_index) * ih.nxcon;
+                auto& completion = wd[well].completions[comp_index];
+                // Note: subtracting 1 from indices (Fortran -> C convention).
+                completion.grid_index = grid_index;
+                completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
+                                   icon[icon_offset + ICON_J_INDEX] - 1,
+                                   icon[icon_offset + ICON_K_INDEX] - 1 };
+                // Note: taking the negative input, to get inflow rate.
+                completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+            }
+        }
+        return wd;
+    }
 
 
 
