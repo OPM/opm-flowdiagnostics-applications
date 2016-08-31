@@ -1636,17 +1636,37 @@ flux(const BlackoilPhases::PhaseIndex phase,
 
     auto v = std::vector<double>{};
 
-    v.reserve(this->numConnections());
+    const auto totconn =
+        this->numConnections() + this->nnc_.numConnections();
+
+    v.reserve(totconn);
 
     ecl_file_select_rstblock_report_step(this->src_.get(), rptstep);
 
     for (const auto& G : this->grid_) {
         const auto& q = G.connectionData(this->src_.get(), vector);
 
+        if (q.empty()) {
+            // Flux vector invalid unless all grids provide this result
+            // vector data.
+            return {};
+        }
+
         v.insert(v.end(), q.begin(), q.end());
     }
 
-    this->fluxNNC(vector, v);
+    if (this->nnc_.numConnections() > 0) {
+        // Model includes non-neighbouring connections such as faults and/or
+        // local grid refinement.  Extract pertinent flux values for these
+        // connections.
+        this->fluxNNC(vector, v);
+    }
+
+    if (v.size() < totconn) {
+        // Result vector data not available for NNCs.  Entire flux vector is
+        // invalid.
+        return {};
+    }
 
     return v;
 }
@@ -1665,6 +1685,7 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
                              std::vector<double>& flux) const
 {
     auto v = std::vector<double>(this->nnc_.numConnections(), 0.0);
+    auto assigned = std::vector<bool>(v.size(), false);
 
     for (const auto& cat : this->nnc_.allCategories()) {
         const auto& rel    = this->nnc_.getRelations(cat);
@@ -1699,11 +1720,23 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
                 assert (ix.kwIdx    < q.size());
 
                 v[ix.neighIdx] = q[ix.kwIdx];
+
+                assigned[ix.neighIdx] = true;
             }
         }
     }
 
-    flux.insert(flux.end(), v.begin(), v.end());
+    // NNC flux field is valid if there are no unassigned entries, i.e., if
+    // there are no 'false' values in the "assigned" record.
+    const auto valid = assigned.end() ==
+        std::find(assigned.begin(), assigned.end(), false);
+
+    if (valid) {
+        // This result set (flux) vector is fully supported by at least one
+        // category of non-Cartesian keywords.  Append result to global flux
+        // vector.
+        flux.insert(flux.end(), v.begin(), v.end());
+    }
 }
 
 std::string
