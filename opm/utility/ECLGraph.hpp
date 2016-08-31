@@ -97,6 +97,11 @@ namespace Opm {
         ///                which next set of phase fluxes should be retrieved.
         void assignFluxDataSource(const Path& src);
 
+        /// Retrieve number of grids.
+        ///
+        /// \return   The number of LGR grids plus one (the main grid).
+        int numGrids() const;
+
         /// Retrieve active cell ID from (I,J,K) tuple in particular grid.
         ///
         /// \param[in] ijk Cartesian index tuple of particular cell.

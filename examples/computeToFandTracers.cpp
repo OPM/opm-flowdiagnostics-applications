@@ -80,8 +80,8 @@ namespace {
     }
 
     Opm::FlowDiagnostics::ConnectionValues
-    extractFluxField(/* mutable */ Opm::ECLGraph& G,
-                     const int                    step)
+    extractFluxField(const Opm::ECLGraph& G,
+                     const int step)
     {
         using ConnVals = Opm::FlowDiagnostics::ConnectionValues;
 
@@ -89,15 +89,14 @@ namespace {
         using NPhas = ConnVals::NumPhases;
 
         const auto nconn = NConn{G.numConnections()};
-        const auto nphas = NPhas{3};
+        const auto nphas = NPhas{2};
 
         auto flux = ConnVals(nconn, nphas);
 
         auto phas = ConnVals::PhaseID{0};
 
         for (const auto& p : { Opm::BlackoilPhases::Aqua   ,
-                               Opm::BlackoilPhases::Liquid ,
-                               Opm::BlackoilPhases::Vapour })
+                               Opm::BlackoilPhases::Liquid  })
         {
             const auto pflux = G.flux(p, step);
 
@@ -120,7 +119,9 @@ namespace {
     }
 
     Opm::FlowDiagnostics::Toolbox
-    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G, const int step)
+    initialiseFlowDiagnostics(const Opm::ECLGraph& G,
+                              const std::vector<Opm::ECLWellSolution::WellData>& well_fluxes,
+                              const int step)
     {
         const auto connGraph = Opm::FlowDiagnostics::
             ConnectivityGraph{ static_cast<int>(G.numCells()),
@@ -128,10 +129,32 @@ namespace {
 
         using FDT = Opm::FlowDiagnostics::Toolbox;
 
-        auto tool = FDT{ connGraph };
+        auto fl = extractFluxField(G, step);
+        const size_t num_conn = fl.numConnections();
+        const size_t num_phases = fl.numPhases();
+        for (size_t conn = 0; conn < num_conn; ++conn) {
+            using Co = Opm::FlowDiagnostics::ConnectionValues::ConnID;
+            using Ph = Opm::FlowDiagnostics::ConnectionValues::PhaseID;
+            for (size_t phase = 0; phase < num_phases; ++phase) {
+                fl(Co{conn}, Ph{phase}) /= 86400; // HACK! converting to SI.
+            }
+        }
 
+        Opm::FlowDiagnostics::CellSetValues inflow;
+        for (const auto& well : well_fluxes) {
+            for (const auto& completion : well.completions) {
+                const int grid_index = completion.grid_index;
+                const auto& ijk = completion.ijk;
+                const int cell_index = G.activeCell(ijk, grid_index);
+                inflow.addCellValue(cell_index, completion.reservoir_inflow_rate);
+            }
+        }
+
+        // Create the Toolbox.
+        auto tool = FDT{ connGraph };
         tool.assignPoreVolume(G.poreVolume());
-        tool.assignConnectionFlux(extractFluxField(G, step));
+        tool.assignConnectionFlux(fl);
+        tool.assignInflowFlux(inflow);
 
         return tool;
     }
@@ -165,7 +188,7 @@ try {
     // Read graph and fluxes, initialise the toolbox.
     auto graph = Opm::ECLGraph::load(grid, init);
     graph.assignFluxDataSource(restart);
-    auto fdTool = initialiseFlowDiagnostics(graph, step);
+    auto fdTool = initialiseFlowDiagnostics(graph, well_fluxes, step);
 
     // Solve for time of flight.
     using FDT = Opm::FlowDiagnostics::Toolbox;
@@ -174,6 +197,7 @@ try {
     const auto& tof = sol.fd.timeOfFlight();
 
     // Write it to standard out.
+    std::cout.precision(16);
     for (double t : tof) {
         std::cout << t << '\n';
     }
