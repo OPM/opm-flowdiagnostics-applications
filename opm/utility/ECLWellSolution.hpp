@@ -35,10 +35,8 @@ namespace Opm
     class ECLWellSolution
     {
     public:
-        using Path = boost::filesystem::path;
-
         /// Construct with path to restart file.
-        explicit ECLWellSolution(const Path& restart_filename);
+        explicit ECLWellSolution(const boost::filesystem::path& restart_filename);
 
         /// Contains the well data extracted from the restart file.
         struct WellData
@@ -46,8 +44,9 @@ namespace Opm
             std::string name;
             struct Completion
             {
-                std::array<int, 3> ijk;
-                double reservoir_inflow_rate;
+                int grid_index;                // 0 for main grid, otherwise LGR grid.
+                std::array<int, 3> ijk;        // Cartesian location in grid.
+                double reservoir_inflow_rate;  // Total fluid rate in SI (m^3/s).
             };
             std::vector<Completion> completions;
         };
@@ -56,14 +55,20 @@ namespace Opm
         ///
         /// Will throw if required data is not available for the
         /// requested step.
-        std::vector<WellData> solution(const int report_step);
+        std::vector<WellData> solution(const int report_step) const;
 
     private:
+        // Types.
         using FilePtr = ERT::ert_unique_ptr<ecl_file_type, ecl_file_close>;
+
+        // Data members.
         FilePtr restart_;
-        std::vector<double> loadDoubleField(const std::string& fieldname);
-        std::vector<int> loadIntField(const std::string& fieldname);
-        std::vector<std::string> loadStringField(const std::string& fieldname);
+
+        // Methods.
+        ecl_kw_type* getKeyword(const std::string& fieldname) const;
+        std::vector<double> loadDoubleField(const std::string& fieldname) const;
+        std::vector<int> loadIntField(const std::string& fieldname) const;
+        std::vector<std::string> loadStringField(const std::string& fieldname) const;
     };
 
 

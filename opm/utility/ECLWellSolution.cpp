@@ -44,12 +44,12 @@ namespace Opm
             ECLRestartFileSelectReportBlock(ecl_file_type* file, const int report_step)
                 : file_(file)
             {
+                if (!ecl_file_has_report_step(file_, report_step)) {
+                    throw std::invalid_argument("Report step " + std::to_string(report_step) + " not found.");
+                }
                 ecl_file_push_block(file_);
                 ecl_file_select_global(file_);
-                const bool ok = ecl_file_select_rstblock_report_step(file_, report_step);
-                if (!ok) {
-                    throw std::runtime_error("Failed to select report step " + std::to_string(report_step));
-                }
+                ecl_file_select_rstblock_report_step(file_, report_step);
             }
             ~ECLRestartFileSelectReportBlock()
             {
@@ -179,7 +179,7 @@ namespace Opm
 
 
 
-    ECLWellSolution::ECLWellSolution(const Path& restart_filename)
+    ECLWellSolution::ECLWellSolution(const boost::filesystem::path& restart_filename)
         : restart_(load(restart_filename))
     {
     }
@@ -189,7 +189,7 @@ namespace Opm
 
 
     std::vector<ECLWellSolution::WellData>
-    ECLWellSolution::solution(const int report_step)
+    ECLWellSolution::solution(const int report_step) const
     {
         ECLRestartFileSelectReportBlock select(restart_.get(), report_step);
         {
@@ -217,6 +217,7 @@ namespace Opm
                     const int xcon_offset = (well*ih.ncwma + comp_index) * ih.nxcon;
                     auto& completion = wd[well].completions[comp_index];
                     // Note: subtracting 1 from indices (Fortran -> C convention).
+                    completion.grid_index = 0; // TODO: get correct LGR grid index.
                     completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
                                        icon[icon_offset + ICON_J_INDEX] - 1,
                                        icon[icon_offset + ICON_K_INDEX] - 1 };
@@ -231,15 +232,24 @@ namespace Opm
 
 
 
-    std::vector<double>
-    ECLWellSolution::loadDoubleField(const std::string& fieldname)
+    ecl_kw_type*
+    ECLWellSolution::getKeyword(const std::string& fieldname) const
     {
-        std::vector<double> field_data;
-        const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
-        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
-        if (keyword == nullptr) {
+        const int local_occurrence = 0; // This should be correct for all the well-related keywords.
+        if (ecl_file_get_num_named_kw(restart_.get(), fieldname.c_str()) == 0) {
             throw std::runtime_error("Could not find field " + fieldname);
         }
+        return ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
+    }
+
+
+
+
+    std::vector<double>
+    ECLWellSolution::loadDoubleField(const std::string& fieldname) const
+    {
+        ecl_kw_type* keyword = getKeyword(fieldname);
+        std::vector<double> field_data;
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_data_as_double(keyword, field_data.data());
         return field_data;
@@ -249,14 +259,10 @@ namespace Opm
 
 
     std::vector<int>
-    ECLWellSolution::loadIntField(const std::string& fieldname)
+    ECLWellSolution::loadIntField(const std::string& fieldname) const
     {
+        ecl_kw_type* keyword = getKeyword(fieldname);
         std::vector<int> field_data;
-        const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
-        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
-        if (keyword == nullptr) {
-            throw std::runtime_error("Could not find field " + fieldname);
-        }
         field_data.resize(ecl_kw_get_size(keyword));
         ecl_kw_get_memcpy_int_data(keyword, field_data.data());
         return field_data;
@@ -266,14 +272,10 @@ namespace Opm
 
 
     std::vector<std::string>
-    ECLWellSolution::loadStringField(const std::string& fieldname)
+    ECLWellSolution::loadStringField(const std::string& fieldname) const
     {
+        ecl_kw_type* keyword = getKeyword(fieldname);
         std::vector<std::string> field_data;
-        const int local_occurrence = 0; // TODO: with LGRs this might need reconsideration.
-        ecl_kw_type* keyword = ecl_file_iget_named_kw(restart_.get(), fieldname.c_str(), local_occurrence);
-        if (keyword == nullptr) {
-            throw std::runtime_error("Could not find field " + fieldname);
-        }
         const int size = ecl_kw_get_size(keyword);
         field_data.resize(size);
         for (int pos = 0; pos < size; ++pos) {
