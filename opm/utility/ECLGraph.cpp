@@ -1038,6 +1038,11 @@ public:
     ///                which next set of phase fluxes should be retrieved.
     void assignDataSource(const Path& src);
 
+    /// Retrieve number of grids.
+    ///
+    /// \return   The number of LGR grids plus one (the main grid).
+    int numGrids() const;
+
     /// Retrieve active cell ID from (I,J,K) tuple in particular grid.
     ///
     /// \param[in] gridID Identity of specific grid to which to relate the
@@ -1524,6 +1529,13 @@ Opm::ECLGraph::Impl::assignDataSource(const Path& src)
 
 int
 Opm::ECLGraph::Impl::
+numGrids() const
+{
+    return grid_.size();
+}
+
+int
+Opm::ECLGraph::Impl::
 activeCell(const int                gridID,
            const std::array<int,3>& ijk) const
 {
@@ -1749,6 +1761,12 @@ Opm::ECLGraph::load(const Path& grid, const Path& init)
     auto pImpl = ImplPtr{new Impl(grid, init)};
 
     return { std::move(pImpl) };
+}
+
+int
+Opm::ECLGraph::numGrids() const
+{
+    return this->pImpl_->numGrids();
 }
 
 int
