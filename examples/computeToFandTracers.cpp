@@ -80,8 +80,8 @@ namespace {
     }
 
     Opm::FlowDiagnostics::ConnectionValues
-    extractFluxField(/* mutable */ Opm::ECLGraph& G,
-                     const int                    step)
+    extractFluxField(const Opm::ECLGraph& G,
+                     const int step)
     {
         using ConnVals = Opm::FlowDiagnostics::ConnectionValues;
 
@@ -89,15 +89,14 @@ namespace {
         using NPhas = ConnVals::NumPhases;
 
         const auto nconn = NConn{G.numConnections()};
-        const auto nphas = NPhas{3};
+        const auto nphas = NPhas{2};
 
         auto flux = ConnVals(nconn, nphas);
 
         auto phas = ConnVals::PhaseID{0};
 
         for (const auto& p : { Opm::BlackoilPhases::Aqua   ,
-                               Opm::BlackoilPhases::Liquid ,
-                               Opm::BlackoilPhases::Vapour })
+                               Opm::BlackoilPhases::Liquid  })
         {
             const auto pflux = G.flux(p, step);
 
@@ -120,7 +119,7 @@ namespace {
     }
 
     Opm::FlowDiagnostics::Toolbox
-    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G,
+    initialiseFlowDiagnostics(const Opm::ECLGraph& G,
                               const std::vector<Opm::ECLWellSolution::WellData>& well_fluxes,
                               const int step)
     {
