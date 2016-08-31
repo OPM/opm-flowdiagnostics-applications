@@ -157,9 +157,9 @@ namespace Opm
             using namespace unit;
 
             switch (unit_code) {
-            case INTEHEAD::Metric: return cubic(meter)/day;    // m^3/day
-            case INTEHEAD::Field: return stb/day;              // stb/day
-            case INTEHEAD::Lab: return cubic(centi*meter)/day; // (cm)^3/day
+            case INTEHEAD::Metric: return cubic(meter)/day;        // m^3/day
+            case INTEHEAD::Field:  return stb/day;                 // stb/day
+            case INTEHEAD::Lab:    return cubic(centi*meter)/hour; // (cm)^3/h
             default: throw std::runtime_error("Unknown unit code from INTEHEAD: " + std::to_string(unit_code));
             }
         }
