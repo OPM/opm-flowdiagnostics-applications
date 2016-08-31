@@ -182,12 +182,11 @@ try {
         : deriveFileName(casename, { ".UNRST", ".FUNRST" });
     const int step = param.getDefault("step", 0);
 
-    Opm::ECLWellSolution wsol(restart);
-    std::vector<Opm::ECLWellSolution::WellData> well_fluxes = wsol.solution(step);
-
     // Read graph and fluxes, initialise the toolbox.
     auto graph = Opm::ECLGraph::load(grid, init);
     graph.assignFluxDataSource(restart);
+    Opm::ECLWellSolution wsol(restart);
+    auto well_fluxes = wsol.solution(step, graph.numGrids());
     auto fdTool = initialiseFlowDiagnostics(graph, well_fluxes, step);
 
     // Solve for time of flight.
