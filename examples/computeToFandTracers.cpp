@@ -130,11 +130,7 @@ namespace {
 
         using FDT = Opm::FlowDiagnostics::Toolbox;
 
-        auto tool = FDT{ connGraph };
-
-
-        tool.assignPoreVolume(G.poreVolume());
-        auto fl = extractFluxField(G, step - 1);   // HACK! Subtract 1 to work around occurrence vs report step problem
+        auto fl = extractFluxField(G, step);
         const size_t num_conn = fl.numConnections();
         const size_t num_phases = fl.numPhases();
         for (size_t conn = 0; conn < num_conn; ++conn) {
@@ -144,20 +140,21 @@ namespace {
                 fl(Co{conn}, Ph{phase}) /= 86400; // HACK! converting to SI.
             }
         }
-        tool.assignConnectionFlux(fl);
 
-        // This code only works with a grid that has no inactive cells.
-        // It is intended for temporary testing only!
         Opm::FlowDiagnostics::CellSetValues inflow;
-        const int ni = 20; const int nj = 20;
         for (const auto& well : well_fluxes) {
             for (const auto& completion : well.completions) {
+                const int grid_index = completion.grid_index;
                 const auto& ijk = completion.ijk;
-                const int cell_index = ijk[0] + ijk[1] * ni + ijk[2] * ni * nj;
+                const int cell_index = G.activeCell(ijk, grid_index);
                 inflow.addCellValue(cell_index, completion.reservoir_inflow_rate);
             }
         }
 
+        // Create the Toolbox.
+        auto tool = FDT{ connGraph };
+        tool.assignPoreVolume(G.poreVolume());
+        tool.assignConnectionFlux(fl);
         tool.assignInflowFlux(inflow);
 
         return tool;
