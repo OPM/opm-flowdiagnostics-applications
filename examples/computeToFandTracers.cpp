@@ -120,7 +120,9 @@ namespace {
     }
 
     Opm::FlowDiagnostics::Toolbox
-    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G, const int step)
+    initialiseFlowDiagnostics(/* mutable */ Opm::ECLGraph& G,
+                              const std::vector<Opm::ECLWellSolution::WellData>& well_fluxes,
+                              const int step)
     {
         const auto connGraph = Opm::FlowDiagnostics::
             ConnectivityGraph{ static_cast<int>(G.numCells()),
@@ -130,8 +132,33 @@ namespace {
 
         auto tool = FDT{ connGraph };
 
+
         tool.assignPoreVolume(G.poreVolume());
-        tool.assignConnectionFlux(extractFluxField(G, step));
+        auto fl = extractFluxField(G, step - 1);   // HACK! Subtract 1 to work around occurrence vs report step problem
+        const size_t num_conn = fl.numConnections();
+        const size_t num_phases = fl.numPhases();
+        for (size_t conn = 0; conn < num_conn; ++conn) {
+            using Co = Opm::FlowDiagnostics::ConnectionValues::ConnID;
+            using Ph = Opm::FlowDiagnostics::ConnectionValues::PhaseID;
+            for (size_t phase = 0; phase < num_phases; ++phase) {
+                fl(Co{conn}, Ph{phase}) /= 86400; // HACK! converting to SI.
+            }
+        }
+        tool.assignConnectionFlux(fl);
+
+        // This code only works with a grid that has no inactive cells.
+        // It is intended for temporary testing only!
+        Opm::FlowDiagnostics::CellSetValues inflow;
+        const int ni = 20; const int nj = 20;
+        for (const auto& well : well_fluxes) {
+            for (const auto& completion : well.completions) {
+                const auto& ijk = completion.ijk;
+                const int cell_index = ijk[0] + ijk[1] * ni + ijk[2] * ni * nj;
+                inflow.addCellValue(cell_index, completion.reservoir_inflow_rate);
+            }
+        }
+
+        tool.assignInflowFlux(inflow);
 
         return tool;
     }
@@ -165,7 +192,7 @@ try {
     // Read graph and fluxes, initialise the toolbox.
     auto graph = Opm::ECLGraph::load(grid, init);
     graph.assignFluxDataSource(restart);
-    auto fdTool = initialiseFlowDiagnostics(graph, step);
+    auto fdTool = initialiseFlowDiagnostics(graph, well_fluxes, step);
 
     // Solve for time of flight.
     using FDT = Opm::FlowDiagnostics::Toolbox;
@@ -174,6 +201,7 @@ try {
     const auto& tof = sol.fd.timeOfFlight();
 
     // Write it to standard out.
+    std::cout.precision(16);
     for (double t : tof) {
         std::cout << t << '\n';
     }
