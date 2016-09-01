@@ -1582,8 +1582,8 @@ Opm::ECLGraph::Impl::neighbours() const
 {
     auto N = std::vector<int>{};
 
-    N.reserve(2 * (this->numConnections() +
-                   this->nnc_.numConnections()));
+    // this->numConnections() includes NNCs.
+    N.reserve(2 * this->numConnections());
 
     {
         auto off = this->activeOffset_.begin();
@@ -1636,8 +1636,8 @@ flux(const BlackoilPhases::PhaseIndex phase,
 
     auto v = std::vector<double>{};
 
-    const auto totconn =
-        this->numConnections() + this->nnc_.numConnections();
+    // Recall: this->numConnections() includes NNCs.
+    const auto totconn = this->numConnections();
 
     v.reserve(totconn);
 
