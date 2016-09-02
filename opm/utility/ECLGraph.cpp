@@ -1379,7 +1379,8 @@ NNC::add(const std::vector<ECL::CartesianGridData>& grid,
          const ecl_nnc_type&                        nnc)
 {
     if (! this->isViable(grid, nnc)) {
-        // At least one endpoint unviable.  Don't record connection.
+        // Zero transmissibility or at least one endpoint unviable.  Don't
+        // record connection.
         return;
     }
 
@@ -1492,7 +1493,8 @@ Opm::ECLGraph::Impl::NNC::
 isViable(const std::vector<ECL::CartesianGridData>& grids,
          const ecl_nnc_type&                        nnc) const
 {
-    return this->isViable(grids, nnc.grid_nr1, nnc.global_index1)
+    return (nnc.trans > 0.0)    // Omit zero-trans NNCs
+        && this->isViable(grids, nnc.grid_nr1, nnc.global_index1)
         && this->isViable(grids, nnc.grid_nr2, nnc.global_index2);
 }
 
