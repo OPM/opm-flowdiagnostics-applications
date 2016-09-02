@@ -466,7 +466,7 @@ ECL::getGrid(const ecl_grid_type* G, const int gridID)
 {
     assert ((gridID >= 0) && "Grid ID must be non-negative");
 
-    if (gridID == 0) {
+    if (gridID == ECL_GRID_MAINGRID_LGR_NR) {
         return G;
     }
 
@@ -1462,7 +1462,7 @@ classifyConnection(const int grid1, const int grid2) const
         return Category::Normal;
     }
 
-    if (grid1 == 0) {           // Main grid
+    if (grid1 == ECL_GRID_MAINGRID_LGR_NR) { // Main grid
         return Category::GlobalToLocal;
     }
 
