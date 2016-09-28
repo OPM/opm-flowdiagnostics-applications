@@ -36,12 +36,18 @@ namespace Opm
     {
     public:
         /// Construct with path to restart file.
-        explicit ECLWellSolution(const boost::filesystem::path& restart_filename);
+        /// \param[in] restart_filename    filename of UNRST file
+        /// \param[in] rate_threshold      a well will be ignored if its total RESV rate is less than this
+        /// \param[in] disallow_crossflow  if true, injecting perforations of production wells and vice versa will be ignored
+        explicit ECLWellSolution(const boost::filesystem::path& restart_filename,
+                                 const double rate_threshold = 1e-14,
+                                 const bool disallow_crossflow = true);
 
         /// Contains the well data extracted from the restart file.
         struct WellData
         {
             std::string name;
+            bool is_injector_well;
             struct Completion
             {
                 int grid_index;                // 0 for main grid, otherwise LGR grid.
@@ -64,6 +70,8 @@ namespace Opm
 
         // Data members.
         FilePtr restart_;
+        double rate_threshold_;
+        bool disallow_crossflow_;
 
         // Methods.
         ecl_kw_type* getKeyword(const std::string& fieldname) const;
