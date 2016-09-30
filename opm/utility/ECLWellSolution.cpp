@@ -26,6 +26,7 @@
 #include <opm/core/utility/Units.hpp>
 #include <ert/ecl/ecl_kw_magic.h>
 #include <ert/ecl_well/well_const.h>
+#include <cmath>
 #include <stdexcept>
 #include <sstream>
 
@@ -197,13 +198,24 @@ namespace Opm
         }
 
 
+
+
+        // Constants not provided by ert.
+        enum { XWEL_RESV_INDEX = 4 };
+        enum { IWEL_TYPE_PRODUCER = 1 };
+
+
     } // anonymous namespace
 
 
 
 
-    ECLWellSolution::ECLWellSolution(const boost::filesystem::path& restart_filename)
+    ECLWellSolution::ECLWellSolution(const boost::filesystem::path& restart_filename,
+                                     const double rate_threshold,
+                                     const bool disallow_crossflow)
         : restart_(load(restart_filename))
+        , rate_threshold_(rate_threshold)
+        , disallow_crossflow_(disallow_crossflow)
     {
     }
 
@@ -308,19 +320,30 @@ namespace Opm
         // Read necessary keywords.
         auto zwel = loadStringField(ZWEL_KW);
         auto iwel = loadIntField(IWEL_KW);
+        auto xwel = loadDoubleField("XWEL");
         auto icon = loadIntField(ICON_KW);
         auto xcon = loadDoubleField("XCON");
 
         // Create well data.
-        std::vector<WellData> wd(ih.nwell);
+        std::vector<WellData> wd_vec;
+        wd_vec.reserve(ih.nwell);
         for (int well = 0; well < ih.nwell; ++well) {
-            wd[well].name = trimSpacesRight(zwel[well * ih.nzwel]);
+            // Skip if total rate below threshold (for wells that are
+            // shut or stopped for example).
+            const double well_reservoir_inflow_rate = -unit::convert::from(xwel[well * ih.nxwel + XWEL_RESV_INDEX], qr_unit);
+            if (std::fabs(well_reservoir_inflow_rate) < rate_threshold_) {
+                continue;
+            }
+            // Otherwise: add data for this well.
+            WellData wd;
+            wd.name = trimSpacesRight(zwel[well * ih.nzwel]);
             const int ncon = iwel[well * ih.niwel + IWEL_CONNECTIONS_INDEX];
-            wd[well].completions.resize(ncon);
+            const bool is_producer = (iwel[well * ih.niwel + IWEL_TYPE_INDEX] == IWEL_TYPE_PRODUCER);
+            wd.completions.reserve(ncon);
             for (int comp_index = 0; comp_index < ncon; ++comp_index) {
                 const int icon_offset = (well*ih.ncwma + comp_index) * ih.nicon;
                 const int xcon_offset = (well*ih.ncwma + comp_index) * ih.nxcon;
-                auto& completion = wd[well].completions[comp_index];
+                WellData::Completion completion;
                 // Note: subtracting 1 from indices (Fortran -> C convention).
                 completion.grid_index = grid_index;
                 completion.ijk = { icon[icon_offset + ICON_I_INDEX] - 1,
@@ -328,9 +351,19 @@ namespace Opm
                                    icon[icon_offset + ICON_K_INDEX] - 1 };
                 // Note: taking the negative input, to get inflow rate.
                 completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+                if (disallow_crossflow_) {
+                    // Add completion only if not cross-flowing (injecting producer or producing injector).
+                    if (completion.reservoir_inflow_rate < 0.0 == is_producer) {
+                        wd.completions.push_back(completion);
+                    }
+                } else {
+                    // Always add completion.
+                    wd.completions.push_back(completion);
+                }
             }
+            wd_vec.push_back(wd);
         }
-        return wd;
+        return wd_vec;
     }
 
 
