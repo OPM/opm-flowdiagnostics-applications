@@ -363,6 +363,7 @@ namespace {
             /// derivation (replaces chains of if-else)
             using DirectionSuffix =
                 std::map<CartesianCells::Direction, std::string>;
+        public:
 
             /// Numeric identity of this grid.  Zero for main grid, greater
             /// than zero for LGRs.
@@ -862,12 +863,21 @@ ECL::CartesianGridData::cellData(const ecl_file_type* src,
         return {};
     }
 
+    if (this->gridID_ > 0) {
+        ecl_file_push_block(const_cast<ecl_file_type*>(src));
+        ecl_file_subselect_block(const_cast<ecl_file_type*>(src), LGR_KW, this->gridID_ - 1);
+    }
+
     const auto v =
-        ecl_file_iget_named_kw(src, vector.c_str(), this->gridID_);
+        ecl_file_iget_named_kw(src, vector.c_str(), 0);
 
     auto x = std::vector<double>(ecl_kw_get_size(v));
 
     ecl_kw_get_data_as_double(v, x.data());
+
+    if (this->gridID_ > 0) {
+        ecl_file_pop_block(const_cast<ecl_file_type*>(src));
+    }
 
     return this->cells_.scatterToGlobal(x);
 }
@@ -877,8 +887,18 @@ ECL::CartesianGridData::haveCellData(const ecl_file_type* src,
                                      const std::string&   vector) const
 {
     // Recall: get_num_named_kw() is block aware (uses src->active_map).
-
-    return ecl_file_get_num_named_kw(src, vector.c_str()) > this->gridID_;
+    if (this->gridID_ > 0) {
+        // LGR grid.
+        ecl_file_push_block(const_cast<ecl_file_type*>(src));
+        ecl_file_subselect_block(const_cast<ecl_file_type*>(src), LGR_KW, this->gridID_ - 1);
+        const int num_kw_in_block = ecl_file_get_num_named_kw(src, vector.c_str());
+        ecl_file_pop_block(const_cast<ecl_file_type*>(src));
+        return num_kw_in_block > 0;
+    } else {
+        const int num_grids = 1 + ecl_file_get_num_named_kw(src, LGR_KW);
+        const int num_kw_in_block = ecl_file_get_num_named_kw(src, vector.c_str());
+        return num_kw_in_block == num_grids || num_kw_in_block == 1;
+    }
 }
 
 bool
@@ -1693,13 +1713,14 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
         const auto& rel    = this->nnc_.getRelations(cat);
         const auto  fluxID = vector + rel.fluxID;
 
-        auto gridID = 0;
+        // auto gridID = 0;
         for (const auto& G : this->grid_) {
+            const int gridID = G.gridID_;
             const auto& iset = rel.indexSet.getGridCollection(gridID);
 
             // Must increment grid ID irrespective of early break of
             // iteration.
-            gridID += 1;
+            // gridID += 1;
 
             if (iset.empty()) {
                 // No NNCs for this category in this grid.  Skip.
