@@ -23,7 +23,6 @@
 #endif
 
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
-#include <opm/core/props/BlackoilPhases.hpp>
 
 #include <opm/flowdiagnostics/ConnectivityGraph.hpp>
 #include <opm/flowdiagnostics/ConnectionValues.hpp>
@@ -94,9 +93,9 @@ namespace {
 
         auto phas = ConnVals::PhaseID{0};
 
-        for (const auto& p : { Opm::BlackoilPhases::Aqua   ,
-                               Opm::BlackoilPhases::Liquid ,
-                               Opm::BlackoilPhases::Vapour })
+        for (const auto& p : { Opm::ECLGraph::Aqua   ,
+                               Opm::ECLGraph::Liquid ,
+                               Opm::ECLGraph::Vapour })
         {
             const auto pflux = G.flux(p, step);
 
