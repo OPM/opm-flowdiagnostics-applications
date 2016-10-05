@@ -1092,8 +1092,8 @@ public:
     /// reported due to report frequencies or no flux values are output at
     /// all).
     std::vector<double>
-    flux(const BlackoilPhases::PhaseIndex phase,
-         const int                        rptstep) const;
+    flux(const PhaseIndex phase,
+         const int        rptstep) const;
 
 private:
     /// Collection of non-Cartesian neighbourship relations attributed to a
@@ -1312,7 +1312,7 @@ private:
     /// \return Basename for ECl vector corresponding to particular phase
     /// flux.
     std::string
-    flowVector(const BlackoilPhases::PhaseIndex phase) const;
+    flowVector(const PhaseIndex phase) const;
 
     /// Extract flux values corresponding to particular result set vector
     /// for all identified non-neighbouring connections.
@@ -1627,8 +1627,8 @@ Opm::ECLGraph::Impl::activePoreVolume() const
 
 std::vector<double>
 Opm::ECLGraph::Impl::
-flux(const BlackoilPhases::PhaseIndex phase,
-     const int                        rptstep) const
+flux(const PhaseIndex phase,
+     const int        rptstep) const
 {
     if (! ecl_file_has_report_step(this->src_.get(), rptstep)) {
         return {};
@@ -1743,19 +1743,19 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
 
 std::string
 Opm::ECLGraph::Impl::
-flowVector(const BlackoilPhases::PhaseIndex phase) const
+flowVector(const PhaseIndex phase) const
 {
     const auto vector = std::string("FLR"); // Flow-rate, reservoir
 
-    if (phase == BlackoilPhases::PhaseIndex::Aqua) {
+    if (phase == PhaseIndex::Aqua) {
         return vector + "WAT";
     }
 
-    if (phase == BlackoilPhases::PhaseIndex::Liquid) {
+    if (phase == PhaseIndex::Liquid) {
         return vector + "OIL";
     }
 
-    if (phase == BlackoilPhases::PhaseIndex::Vapour) {
+    if (phase == PhaseIndex::Vapour) {
         return vector + "GAS";
     }
 
@@ -1841,8 +1841,8 @@ std::vector<double> Opm::ECLGraph::poreVolume() const
 
 std::vector<double>
 Opm::ECLGraph::
-flux(const BlackoilPhases::PhaseIndex phase,
-     const int                        rptstep) const
+flux(const PhaseIndex phase,
+     const int        rptstep) const
 {
     return this->pImpl_->flux(phase, rptstep);
 }

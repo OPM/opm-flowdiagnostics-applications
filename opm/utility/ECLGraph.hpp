@@ -21,8 +21,6 @@
 #ifndef OPM_ECLGRAPH_HEADER_INCLUDED
 #define OPM_ECLGRAPH_HEADER_INCLUDED
 
-#include <opm/core/props/BlackoilPhases.hpp>
-
 #include <array>
 #include <cstddef>
 #include <memory>
@@ -138,6 +136,9 @@ namespace Opm {
         /// strictly positive.
         std::vector<double> poreVolume() const;
 
+        /// Enum for indicating requested phase from the flux() method.
+        enum PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
+
         /// Retrive phase flux on all connections defined by \code
         /// neighbours() \endcode.
         ///
@@ -151,8 +152,8 @@ namespace Opm {
         /// occurrence is not reported due to report frequencies or no flux
         /// values are output at all).
         std::vector<double>
-        flux(const BlackoilPhases::PhaseIndex phase,
-             const int                        rptstep = 0) const;
+        flux(const PhaseIndex phase,
+             const int        rptstep = 0) const;
 
     private:
         /// Implementation class.
