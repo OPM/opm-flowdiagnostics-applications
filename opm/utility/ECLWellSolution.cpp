@@ -23,7 +23,7 @@
 #endif
 
 #include <opm/utility/ECLWellSolution.hpp>
-#include <opm/core/utility/Units.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 #include <ert/ecl/ecl_kw_magic.h>
 #include <ert/ecl_well/well_const.h>
 #include <cmath>
