@@ -29,10 +29,14 @@ int main(int argc, char** argv)
 try {
     auto fdTool = example::setup(argc, argv);
 
-    // Solve for time of flight.
-    std::vector<Opm::FlowDiagnostics::CellSet> start;
-    auto sol = fdTool.computeInjectionDiagnostics(start);
-    const auto& conc_sol = sol.fd.concentration(Opm::FlowDiagnostics::CellSetID());
+    // Solve for tracers.
+    Opm::FlowDiagnostics::CellSetID id("Example start set ID");
+    Opm::FlowDiagnostics::CellSet start;
+    start.identify(id);
+    start.insert(123);
+    auto sol = fdTool.computeInjectionDiagnostics({start});
+    // const auto& conc_sol = sol.fd.concentration(id);
+    const auto& conc_sol = sol.fd.timeOfFlight(id);
 
     // Write it to standard out.
     std::cout.precision(16);
