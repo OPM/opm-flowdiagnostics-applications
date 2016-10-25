@@ -43,7 +43,7 @@
 #include <boost/filesystem.hpp>
 
 namespace example {
-    bool isFile(const boost::filesystem::path& p)
+    inline bool isFile(const boost::filesystem::path& p)
     {
         namespace fs = boost::filesystem;
 
@@ -57,7 +57,7 @@ namespace example {
                 is_regular_file(fs::read_symlink(p)));
     }
 
-    boost::filesystem::path
+    inline boost::filesystem::path
     deriveFileName(boost::filesystem::path         file,
                    const std::vector<std::string>& extensions)
     {
@@ -79,8 +79,8 @@ namespace example {
         throw std::invalid_argument(os.str());
     }
 
-    Opm::FlowDiagnostics::ConnectionValues
-    extractFluxField(const Opm::ECLGraph& G, const int step)
+    inline Opm::FlowDiagnostics::ConnectionValues
+    extractFluxField(const Opm::ECLGraph& G)
     {
         using ConnVals = Opm::FlowDiagnostics::ConnectionValues;
 
@@ -94,11 +94,11 @@ namespace example {
 
         auto phas = ConnVals::PhaseID{0};
 
-        for (const auto& p : { Opm::ECLGraph::Aqua   ,
-                               Opm::ECLGraph::Liquid ,
-                               Opm::ECLGraph::Vapour })
+        for (const auto& p : { Opm::ECLGraph::PhaseIndex::Aqua   ,
+                               Opm::ECLGraph::PhaseIndex::Liquid ,
+                               Opm::ECLGraph::PhaseIndex::Vapour })
         {
-            const auto pflux = G.flux(p, step);
+            const auto pflux = G.flux(p);
 
             if (! pflux.empty()) {
                 assert (pflux.size() == nconn.total);
@@ -118,49 +118,72 @@ namespace example {
         return flux;
     }
 
-    Opm::FlowDiagnostics::Toolbox
-    initialiseFlowDiagnostics(const Opm::ECLGraph& G,
-                              const std::vector<Opm::ECLWellSolution::WellData>& well_fluxes,
-                              const int step)
+    template <class WellFluxes>
+    Opm::FlowDiagnostics::CellSetValues
+    extractWellFlows(const Opm::ECLGraph& G,
+                     const WellFluxes&    well_fluxes)
     {
-        const auto connGraph = Opm::FlowDiagnostics::
-            ConnectivityGraph{ static_cast<int>(G.numCells()),
-                               G.neighbours() };
-
-        using FDT = Opm::FlowDiagnostics::Toolbox;
-
-        auto fl = extractFluxField(G, step);
-        const size_t num_conn = fl.numConnections();
-        const size_t num_phases = fl.numPhases();
-        for (size_t conn = 0; conn < num_conn; ++conn) {
-            using Co = Opm::FlowDiagnostics::ConnectionValues::ConnID;
-            using Ph = Opm::FlowDiagnostics::ConnectionValues::PhaseID;
-            for (size_t phase = 0; phase < num_phases; ++phase) {
-                fl(Co{conn}, Ph{phase}) /= 86400; // HACK! converting to SI.
-            }
-        }
-
         Opm::FlowDiagnostics::CellSetValues inflow;
         for (const auto& well : well_fluxes) {
             for (const auto& completion : well.completions) {
                 const int grid_index = completion.grid_index;
                 const auto& ijk = completion.ijk;
                 const int cell_index = G.activeCell(ijk, grid_index);
-                inflow.addCellValue(cell_index, completion.reservoir_inflow_rate);
+                if (cell_index >= 0) {
+                    inflow.addCellValue(cell_index, completion.reservoir_inflow_rate);
+                }
             }
         }
 
+        return inflow;
+    }
+
+    namespace Hack {
+        inline Opm::FlowDiagnostics::ConnectionValues
+        convert_flux_to_SI(Opm::FlowDiagnostics::ConnectionValues&& fl)
+        {
+            using Co = Opm::FlowDiagnostics::ConnectionValues::ConnID;
+            using Ph = Opm::FlowDiagnostics::ConnectionValues::PhaseID;
+
+            const auto nconn = fl.numConnections();
+            const auto nphas = fl.numPhases();
+
+            for (auto phas = Ph{0}; phas.id < nphas; ++phas.id) {
+                for (auto conn = Co{0}; conn.id < nconn; ++conn.id) {
+                    fl(conn, phas) /= 86400;
+                }
+            }
+
+            return fl;
+        }
+    }
+
+    inline Opm::FlowDiagnostics::Toolbox
+    initialiseFlowDiagnostics(const Opm::ECLGraph& G)
+    {
+        const auto connGraph = Opm::FlowDiagnostics::
+            ConnectivityGraph{ static_cast<int>(G.numCells()),
+                               G.neighbours() };
+
         // Create the Toolbox.
-        auto tool = FDT{ connGraph };
+        auto tool = Opm::FlowDiagnostics::Toolbox{ connGraph };
+
         tool.assignPoreVolume(G.poreVolume());
-        tool.assignConnectionFlux(fl);
-        tool.assignInflowFlux(inflow);
+        tool.assignConnectionFlux(Hack::convert_flux_to_SI(extractFluxField(G)));
+
+        auto wsol = Opm::ECLWellSolution{};
+
+        const auto well_fluxes =
+            wsol.solution(G.rawResultData(), G.numGrids());
+
+        tool.assignInflowFlux(extractWellFlows(G, well_fluxes));
 
         return tool;
     }
 
 
-    Opm::FlowDiagnostics::Toolbox setup(int argc, char* argv[])
+    inline auto setup(int argc, char* argv[])
+        -> decltype(initialiseFlowDiagnostics(std::declval<Opm::ECLGraph>()))
     {
         // Obtain parameters from command line (possibly specifying a parameter file).
         const bool verify_commandline_syntax = true;
@@ -182,9 +205,18 @@ namespace example {
         // Read graph and fluxes, initialise the toolbox.
         auto graph = Opm::ECLGraph::load(grid, init);
         graph.assignFluxDataSource(restart);
-        Opm::ECLWellSolution wsol(restart);
-        auto well_fluxes = wsol.solution(step, graph.numGrids());
-        return initialiseFlowDiagnostics(graph, well_fluxes, step);
+
+        if (! graph.selectReportStep(step)) {
+            std::ostringstream os;
+
+            os << "Report Step " << step
+               << " is Not Available in Result Set '"
+               << grid.stem() << '\'';
+
+            throw std::domain_error(os.str());
+        }
+
+        return initialiseFlowDiagnostics(graph);
     }
 
 
