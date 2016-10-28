@@ -146,13 +146,22 @@ namespace Opm {
         /// unless the requested keyword data is available in the specific
         /// grid in the current active view.
         ///
-        /// \param[in] vector Named result vector for which to query data
-        ///    availability.
+        /// \tparam T Element type of return value.  The underlying keyword
+        ///    data will be converted to this type if needed and possible.
+        ///    Note that some type combinations do not make sense.  It is,
+        ///    for instance, not possible to retrieve keyword values of an
+        ///    underlying arithmetic type in the form of a \code
+        ///    std::vector<std::string> \endcode.  Similarly, we cannot
+        ///    access underlying character data through elements of an
+        ///    arithmetic type (e.g., \code std::vector<double> \endcode.)
         ///
-        /// \param[in] gridID Identity of specific grid for which to query
-        ///    data availability.
+        /// \param[in] vector Named result vector for which to retrieve
+        ///    keyword data.
         ///
-        /// \return Keyword data values.
+        /// \param[in] gridID Identity of specific grid for which to
+        ///    retrieve keyword data.
+        ///
+        /// \return Keyword data values.  Empty if type conversion fails.
         template <typename T>
         std::vector<T>
         keywordData(const std::string& vector,
