@@ -269,7 +269,7 @@ namespace {
                     ecl_kw_get_memcpy_double_data(kw, x);
                 }
             };
-       } // namespace Details
+        } // namespace Details
 
         /// Extract data elements from ECL keyword.
         ///
