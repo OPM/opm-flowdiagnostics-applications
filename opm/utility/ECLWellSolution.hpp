@@ -34,9 +34,8 @@ namespace Opm
     class ECLWellSolution
     {
     public:
-        /// Construct with path to restart file.
-        /// \param[in] restart_filename    filename of UNRST file
-        /// \param[in] rate_threshold      a well will be ignored if its total RESV rate is less than this
+        /// Constructor.
+        /// \param[in] rate_threshold      a well will be ignored if its total RESV rate is less than this (m^3/s)
         /// \param[in] disallow_crossflow  if true, injecting perforations of production wells and vice versa will be ignored
         explicit ECLWellSolution(const double rate_threshold = 1e-14,
                                  const bool disallow_crossflow = true);
@@ -55,7 +54,7 @@ namespace Opm
             std::vector<Completion> completions;
         };
 
-        /// Return well solution for given report step.
+        /// Return well solution for pre-selected report step
         ///
         /// Will throw if required data is not available for the
         /// requested step.
