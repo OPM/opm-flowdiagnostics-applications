@@ -35,8 +35,7 @@ try {
     start.identify(id);
     start.insert(123);
     auto sol = fdTool.computeInjectionDiagnostics({start});
-    // const auto& conc_sol = sol.fd.concentration(id);
-    const auto& conc_sol = sol.fd.timeOfFlight(id);
+    const auto& conc_sol = sol.fd.concentration(id);
 
     // Write it to standard out.
     std::cout.precision(16);
