@@ -718,7 +718,7 @@ haveKeywordData(const std::string& vector, const int gridID) const
     assert ((gridID >= 0) && "Grid IDs must be non-negative");
 
     // Note: Non-trivial dtor.  Compiler can't ignore object.
-    auto block = Restrict{ *this, gridID };
+    const auto block = Restrict{ *this, gridID };
 
     const auto count =
         ecl_file_view_get_num_named_kw(*this, vector.c_str());
@@ -743,7 +743,7 @@ namespace Opm {
         }
 
         // Note: Non-trivial dtor.  Compiler can't ignore object.
-        auto block = Restrict{ *this, gridID };
+        const auto block = Restrict{ *this, gridID };
 
         const auto occurrence = 0;
 
@@ -755,7 +755,7 @@ namespace Opm {
                 "Logic Error In Data Availability Check");
 
         // Whether or not caller requests a vector<string>.
-        auto makeStringVector =
+        const auto makeStringVector =
             typename std::is_same<T, std::string>::type{};
 
         switch (ecl_kw_get_type(kw)) {
@@ -781,7 +781,7 @@ namespace Opm {
         }
     }
 
-} // namespace Opm::ECL
+} // namespace Opm
 
 Opm::ECLResultData::Impl::operator ecl_file_type*() const
 {
