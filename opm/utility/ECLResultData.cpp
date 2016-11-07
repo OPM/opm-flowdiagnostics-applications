@@ -78,7 +78,7 @@ namespace {
                 {
                     static_assert(! std::is_same<Output, Input>::value,
                                   "Logic Error: Convert<Input>::to<Output>"
-                                  "for Output!=Input");
+                                  " for Output!=Input");
 
                     auto result = std::vector<Output>{};
                     result.reserve(x.size());
@@ -108,7 +108,7 @@ namespace {
                 {
                     static_assert(std::is_same<Output, Input>::value,
                                   "Logic Error: Convert<Input>::to<Output>"
-                                  "for Output==Input");
+                                  " for Output==Input");
 
                     return x;
                 }
