@@ -852,7 +852,7 @@ ECL::CartesianGridData::
 haveConnData(const ::Opm::ECLResultData& src,
              const std::string&          vector) const
 {
-    auto have_data = true;
+    auto have_data = false;
 
     for (const auto& d : { CartesianCells::Direction::I ,
                            CartesianCells::Direction::J ,
@@ -861,8 +861,8 @@ haveConnData(const ::Opm::ECLResultData& src,
         const auto vname = this->vectorName(vector, d);
 
         have_data = this->haveCellData(src, vname);
+				if (have_data) { return true; }
 
-        if (! have_data) { break; }
     }
 
     return have_data;
