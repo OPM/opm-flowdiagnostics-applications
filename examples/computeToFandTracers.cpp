@@ -29,7 +29,8 @@
 //   computeToFandTracers case=<ecl_case_prefix> step=<report_number>
 int main(int argc, char* argv[])
 try {
-    auto fdTool = example::setup(argc, argv);
+    example::Setup setup(argc, argv);
+    auto& fdTool = setup.toolbox;
 
     // Solve for time of flight.
     std::vector<Opm::FlowDiagnostics::CellSet> start;

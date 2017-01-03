@@ -27,7 +27,8 @@
 
 int main(int argc, char** argv)
 try {
-    auto fdTool = example::setup(argc, argv);
+    example::Setup setup(argc, argv);
+    auto& fdTool = setup.toolbox;
 
     // Solve for tracers.
     Opm::FlowDiagnostics::CellSetID id("Example start set ID");
