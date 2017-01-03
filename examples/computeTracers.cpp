@@ -31,18 +31,14 @@ try {
 
     // Solve for tracers.
     Opm::FlowDiagnostics::CellSetID id("Example start set ID");
-    Opm::FlowDiagnostics::CellSet start;
-    start.identify(id);
-    start.insert(123);
+    Opm::FlowDiagnostics::CellSet start(id, {123});
     auto sol = fdTool.computeInjectionDiagnostics({start});
     const auto& conc_sol = sol.fd.concentration(id);
 
     // Write it to standard out.
     std::cout.precision(16);
-    const int num_c = conc_sol.cellValueCount();
-    for (int ii = 0; ii < num_c; ++ii) {
-        auto p = conc_sol.cellValue(ii);
-        std::cout << p.first << "\t" << p.second << '\n';
+    for (auto item : conc_sol) {
+        std::cout << item.first << "   " << item.second << '\n';
     }
 }
 catch (const std::exception& e) {
