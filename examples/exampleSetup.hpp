@@ -156,7 +156,9 @@ namespace example {
 
             return fl;
         }
-    }
+    } // namespace Hack
+
+
 
 
     struct FilePaths
@@ -181,6 +183,8 @@ namespace example {
     };
 
 
+
+
     inline Opm::parameter::ParameterGroup
     initParam(int argc, char** argv)
     {
@@ -192,31 +196,22 @@ namespace example {
     }
 
 
+
+
     inline Opm::ECLGraph
-    initGraph(const FilePaths& file_paths, const int step)
+    initGraph(const FilePaths& file_paths)
     {
         // Read graph and assign restart file.
         auto graph = Opm::ECLGraph::load(file_paths.grid, file_paths.init);
         graph.assignFluxDataSource(file_paths.restart);
-        if (! graph.selectReportStep(step)) {
-            std::ostringstream os;
-            os << "Report Step " << step
-               << " is Not Available in Result Set '"
-               << file_paths.grid.stem() << '\'';
-            throw std::domain_error(os.str());
-        }
         return graph;
     }
 
-    inline std::vector<Opm::ECLWellSolution::WellData>
-    initWellFluxes(const Opm::ECLGraph& G)
-    {
-        auto wsol = Opm::ECLWellSolution{};
-        return wsol.solution(G.rawResultData(), G.numGrids());
-    }
+
+
 
     inline Opm::FlowDiagnostics::Toolbox
-    initToolbox(const Opm::ECLGraph& G, const std::vector<Opm::ECLWellSolution::WellData>& well_fluxes)
+    initToolbox(const Opm::ECLGraph& G)
     {
         const auto connGraph = Opm::FlowDiagnostics::
             ConnectivityGraph{ static_cast<int>(G.numCells()),
@@ -224,11 +219,7 @@ namespace example {
 
         // Create the Toolbox.
         auto tool = Opm::FlowDiagnostics::Toolbox{ connGraph };
-
         tool.assignPoreVolume(G.poreVolume());
-        tool.assignConnectionFlux(Hack::convert_flux_to_SI(extractFluxField(G)));
-
-        tool.assignInflowFlux(extractWellFlows(G, well_fluxes));
 
         return tool;
     }
@@ -240,11 +231,19 @@ namespace example {
     {
         Setup(int argc, char** argv)
             : param(initParam(argc, argv))
-            , file_paths(FilePaths(param))
-            , graph(initGraph(file_paths, param.getDefault("step", 0)))
-            , well_fluxes(initWellFluxes(graph))
-            , toolbox(initToolbox(graph, well_fluxes))
+            , file_paths(param)
+            , graph(initGraph(file_paths))
+            , well_fluxes()
+            , toolbox(initToolbox(graph))
         {
+            const int step = param.getDefault("step", 0);
+            if (!selectReportStep(step)) {
+                std::ostringstream os;
+                os << "Report Step " << step
+                   << " is Not Available in Result Set '"
+                   << file_paths.grid.stem() << '\'';
+                throw std::domain_error(os.str());
+            }
         }
 
         bool selectReportStep(const int step)
