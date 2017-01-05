@@ -158,40 +158,53 @@ namespace example {
         }
     }
 
-    inline Opm::ECLGraph
-    initGraph(int argc, char* argv[])
+
+    struct FilePaths
+    {
+        FilePaths(const Opm::parameter::ParameterGroup& param)
+        {
+            const string casename = param.getDefault<string>("case", "DEFAULT_CASE_NAME");
+            grid = param.has("grid") ? param.get<string>("grid")
+                : deriveFileName(casename, { ".EGRID", ".FEGRID", ".GRID", ".FGRID" });
+            init = param.has("init") ? param.get<string>("init")
+                : deriveFileName(casename, { ".INIT", ".FINIT" });
+            restart = param.has("restart") ? param.get<string>("restart")
+                : deriveFileName(casename, { ".UNRST", ".FUNRST" });
+        }
+
+        using path = boost::filesystem::path;
+        using string = std::string;
+
+        path grid;
+        path init;
+        path restart;
+    };
+
+
+    inline Opm::parameter::ParameterGroup
+    initParam(int argc, char** argv)
     {
         // Obtain parameters from command line (possibly specifying a parameter file).
         const bool verify_commandline_syntax = true;
         const bool parameter_output = false;
         Opm::parameter::ParameterGroup param(argc, argv, verify_commandline_syntax, parameter_output);
+        return param;
+    }
 
-        // Obtain filenames for grid, init and restart files, as well as step number.
-        using boost::filesystem::path;
-        using std::string;
-        const string casename = param.getDefault<string>("case", "DEFAULT_CASE_NAME");
-        const path grid = param.has("grid") ? param.get<string>("grid")
-            : deriveFileName(casename, { ".EGRID", ".FEGRID", ".GRID", ".FGRID" });
-        const path init = param.has("init") ? param.get<string>("init")
-            : deriveFileName(casename, { ".INIT", ".FINIT" });
-        const path restart = param.has("restart") ? param.get<string>("restart")
-            : deriveFileName(casename, { ".UNRST", ".FUNRST" });
-        const int step = param.getDefault("step", 0);
 
-        // Read graph and fluxes, initialise the toolbox.
-        auto graph = Opm::ECLGraph::load(grid, init);
-        graph.assignFluxDataSource(restart);
-
+    inline Opm::ECLGraph
+    initGraph(const FilePaths& file_paths, const int step)
+    {
+        // Read graph and assign restart file.
+        auto graph = Opm::ECLGraph::load(file_paths.grid, file_paths.init);
+        graph.assignFluxDataSource(file_paths.restart);
         if (! graph.selectReportStep(step)) {
             std::ostringstream os;
-
             os << "Report Step " << step
                << " is Not Available in Result Set '"
-               << grid.stem() << '\'';
-
+               << file_paths.grid.stem() << '\'';
             throw std::domain_error(os.str());
         }
-
         return graph;
     }
 
@@ -226,12 +239,29 @@ namespace example {
     struct Setup
     {
         Setup(int argc, char** argv)
-            : graph(initGraph(argc, argv))
+            : param(initParam(argc, argv))
+            , file_paths(FilePaths(param))
+            , graph(initGraph(file_paths, param.getDefault("step", 0)))
             , well_fluxes(initWellFluxes(graph))
             , toolbox(initToolbox(graph, well_fluxes))
         {
         }
 
+        bool selectReportStep(const int step)
+        {
+            if (graph.selectReportStep(step)) {
+                auto wsol = Opm::ECLWellSolution{};
+                well_fluxes = wsol.solution(graph.rawResultData(), graph.numGrids());;
+                toolbox.assignConnectionFlux(Hack::convert_flux_to_SI(extractFluxField(graph)));
+                toolbox.assignInflowFlux(extractWellFlows(graph, well_fluxes));
+                return true;
+            } else {
+                return false;
+            }
+        }
+
+        Opm::parameter::ParameterGroup param;
+        FilePaths file_paths;
         Opm::ECLGraph graph;
         std::vector<Opm::ECLWellSolution::WellData> well_fluxes;
         Opm::FlowDiagnostics::Toolbox toolbox;
