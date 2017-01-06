@@ -33,6 +33,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         examples/computeLocalSolutions.cpp
         examples/computeToFandTracers.cpp
         examples/computeTracers.cpp
+        tests/runAcceptanceTest.cpp
         )
 
 list (APPEND PUBLIC_HEADER_FILES
