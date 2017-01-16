@@ -23,10 +23,12 @@
 list (APPEND MAIN_SOURCE_FILES
         opm/utility/ECLGraph.cpp
         opm/utility/ECLResultData.cpp
+        opm/utility/ECLUnitHandling.cpp
         opm/utility/ECLWellSolution.cpp
         )
 
 list (APPEND TEST_SOURCE_FILES
+        tests/test_eclunithandling.cpp
         )
 
 list (APPEND EXAMPLE_SOURCE_FILES
@@ -39,5 +41,6 @@ list (APPEND EXAMPLE_SOURCE_FILES
 list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLGraph.hpp
         opm/utility/ECLResultData.hpp
+        opm/utility/ECLUnitHandling.hpp
         opm/utility/ECLWellSolution.hpp
         )
