@@ -135,7 +135,7 @@ namespace Opm {
         ///
         /// Corresponds to the \c PORV vector in the INIT file, possibly
         /// restricted to those active cells for which the pore-volume is
-        /// strictly positive.
+        /// strictly positive.  Numerical values in SI units (rm^3).
         std::vector<double> poreVolume() const;
 
         /// Restrict dynamic result set data to single report step.
@@ -167,7 +167,8 @@ namespace Opm {
         /// \return Flux values corresponding to selected phase.  Empty if
         ///    unavailable in the result set (e.g., when querying the gas
         ///    flux in an oil/water system or if no flux values at all were
-        ///    output to the restart file).
+        ///    output to the restart file).  Numerical values in SI units
+        ///    (rm^3/s).
         std::vector<double>
         flux(const PhaseIndex phase) const;
 
