@@ -138,6 +138,15 @@ namespace Opm {
         /// strictly positive.  Numerical values in SI units (rm^3).
         std::vector<double> poreVolume() const;
 
+        /// Retrieve static (background) transmissibility values on all
+        /// connections defined by \code neighbours() \endcode.
+        ///
+        /// Specifically, \code transmissibility()[i] \endcode is the
+        /// transmissibility of the connection between cells \code
+        /// neighbours()[2*i + 0] \endcode and \code neighbours()[2*i + 1]
+        /// \endcode.
+        std::vector<double> transmissibility() const;
+
         /// Restrict dynamic result set data to single report step.
         ///
         /// This method must be called before calling either flux() or
