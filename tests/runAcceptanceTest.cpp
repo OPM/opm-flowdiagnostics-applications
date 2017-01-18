@@ -22,6 +22,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <cmath>
 #include <cstdlib>
 #include <exception>
@@ -357,9 +358,28 @@ namespace {
         return ErrorTolerance{ atol, rtol };
     }
 
+    int numDigits(const std::vector<int>& steps)
+    {
+        if (steps.empty()) {
+            return 1;
+        }
+
+        const auto m =
+            *std::max_element(std::begin(steps), std::end(steps));
+
+        if (m == 0) {
+            return 1;
+        }
+
+        assert (m > 0);
+
+        return std::floor(std::log10(static_cast<double>(m))) + 1;
+    }
+
     ReferenceToF
     loadReference(const ::Opm::parameter::ParameterGroup& param,
-                  const int                               step)
+                  const int                               step,
+                  const int                               nDigits)
     {
         namespace fs = boost::filesystem;
 
@@ -369,7 +389,7 @@ namespace {
         {
             std::ostringstream os;
 
-            os << "tof-" << std::setw(2) << std::setfill('0')
+            os << "tof-" << std::setw(nDigits) << std::setfill('0')
                << step << ".txt";
 
             fname /= os.str();
@@ -451,6 +471,8 @@ namespace {
         const auto start =
             std::vector<Opm::FlowDiagnostics::CellSet>{};
 
+        const auto nDigits = numDigits(steps);
+
         const auto pv = PoreVolume{ setup.graph.poreVolume() };
 
         auto E = std::array<AggregateErrors, 2>{};
@@ -465,7 +487,7 @@ namespace {
                 continue;
             }
 
-            const auto ref = loadReference(setup.param, step);
+            const auto ref = loadReference(setup.param, step, nDigits);
 
             {
                 const auto fwd = setup.toolbox
