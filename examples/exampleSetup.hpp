@@ -138,26 +138,6 @@ namespace example {
         return inflow;
     }
 
-    namespace Hack {
-        inline Opm::FlowDiagnostics::ConnectionValues
-        convert_flux_to_SI(Opm::FlowDiagnostics::ConnectionValues&& fl)
-        {
-            using Co = Opm::FlowDiagnostics::ConnectionValues::ConnID;
-            using Ph = Opm::FlowDiagnostics::ConnectionValues::PhaseID;
-
-            const auto nconn = fl.numConnections();
-            const auto nphas = fl.numPhases();
-
-            for (auto phas = Ph{0}; phas.id < nphas; ++phas.id) {
-                for (auto conn = Co{0}; conn.id < nconn; ++conn.id) {
-                    fl(conn, phas) /= 86400;
-                }
-            }
-
-            return fl;
-        }
-    } // namespace Hack
-
 
 
 
@@ -251,7 +231,7 @@ namespace example {
             if (graph.selectReportStep(step)) {
                 auto wsol = Opm::ECLWellSolution{};
                 well_fluxes = wsol.solution(graph.rawResultData(), graph.numGrids());;
-                toolbox.assignConnectionFlux(Hack::convert_flux_to_SI(extractFluxField(graph)));
+                toolbox.assignConnectionFlux(extractFluxField(graph));
                 toolbox.assignInflowFlux(extractWellFlows(graph, well_fluxes));
                 return true;
             } else {

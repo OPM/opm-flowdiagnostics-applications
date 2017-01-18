@@ -24,6 +24,9 @@
 
 #include <opm/utility/ECLGraph.hpp>
 #include <opm/utility/ECLResultData.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
+
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <algorithm>
 #include <array>
@@ -41,6 +44,7 @@
 #include <boost/filesystem.hpp>
 
 #include <ert/ecl/ecl_grid.h>
+#include <ert/ecl/ecl_kw_magic.h>
 #include <ert/ecl/ecl_nnc_export.h>
 #include <ert/util/ert_unique_ptr.hpp>
 
@@ -93,6 +97,18 @@ namespace {
         std::array<std::size_t,3>
         cartesianDimensions(const ecl_grid_type* G);
 
+        /// Access unit conventions pertaining to single grid in result set.
+        ///
+        /// \param[in] rset Result set.
+        ///
+        /// \param[in] grid_ID Numerical ID of grid.  Non-negative.  Zero
+        ///    for the main grid and positive for LGRs.
+        ///
+        /// \return Unit system convention for \p grid_ID in result set.
+        auto getUnitSystem(const ::Opm::ECLResultData& rset,
+                           const int                   grid_ID)
+            -> decltype(::Opm::ECLUnits::createUnitSystem(0));
+
         /// Retrieve global pore-volume vector from INIT source.
         ///
         /// Specialised tool needed to determine the active cells.
@@ -101,7 +117,11 @@ namespace {
         ///
         /// \param[in] init ERT representation of INIT source.
         ///
-        /// \return Vector of pore-volumes for all global cells of \p G.
+        /// \param[in] grid_ID Numerical ID of grid.  Non-negative.  Zero
+        ///    for the main grid and positive in the case of an LGR.
+        ///
+        /// \return Vector of pore-volumes for all global cells of \p G in
+        ///    SI unit conventions (rm^3).
         std::vector<double>
         getPVolVector(const ecl_grid_type*        G,
                       const ::Opm::ECLResultData& init,
@@ -154,8 +174,17 @@ namespace {
             ///
             /// Corresponds to the \c PORV vector in the INIT file, possibly
             /// restricted to those active cells for which the pore-volume is
-            /// strictly positive.
+            /// strictly positive.  SI unit conventions (rm^3).
             const std::vector<double>& activePoreVolume() const;
+
+            /// Retrieve static (background) transmissibility values on all
+            /// connections defined by \code neighbours() \endcode.
+            ///
+            /// Specifically, \code transmissibility()[i] \endcode is the
+            /// transmissibility of the connection between cells \code
+            /// neighbours()[2*i + 0] \endcode and \code neighbours()[2*i +
+            /// 1] \endcode.
+            const std::vector<double>& transmissibility() const;
 
             /// Retrieve ID of active cell from global ID.
             int activeCell(const std::size_t globalCell) const;
@@ -200,7 +229,8 @@ namespace {
             ///     all of the grid's Cartesian connections.
             std::vector<double>
             connectionData(const ::Opm::ECLResultData& src,
-                           const std::string&          vector) const;
+                           const std::string&          vector,
+                           const double                unit) const;
 
         private:
             /// Facility for deriving Cartesian neighbourship in a grid
@@ -217,14 +247,18 @@ namespace {
                 /// \param[in] G ERT Grid representation.
                 ///
                 /// \param[in] pvol Vector of pore-volumes on all global
-                ///                 cells of \p G.  Typically obtained
-                ///                 through function getPVolVector().
+                ///    cells of \p G.  Typically obtained through function
+                ///    getPVolVector().  Numerical values assumed to be in
+                ///    SI units (rm^3).
                 CartesianCells(const ecl_grid_type*       G,
                                const std::vector<double>& pvol);
 
                 /// Retrive global cell indices of all active cells in grid.
                 std::vector<std::size_t> activeGlobal() const;
 
+                /// Retrieve pore-volume values for all active cells in grid.
+                ///
+                /// SI unit conventions (rm^3).
                 const std::vector<double>& activePoreVolume() const;
 
                 /// Map input vector to all global cells.
@@ -374,6 +408,11 @@ namespace {
             /// Source cells for each Cartesian connection.
             OutCell outCell_;
 
+            /// Transmissibility field for purpose of on-demand flux
+            /// calculation if fluxes are not already available in dynamic
+            /// result set.
+            std::vector<double> trans_;
+
             /// Predicate for whether or not a particular result vector is
             /// defined on the grid's cells.
             ///
@@ -415,6 +454,7 @@ namespace {
             void connectionData(const ::Opm::ECLResultData&     src,
                                 const CartesianCells::Direction d,
                                 const std::string&              vector,
+                                const double                    unit,
                                 std::vector<double>&            x) const;
 
             /// Form complete name of directional result set vector from
@@ -430,7 +470,7 @@ namespace {
                        const CartesianCells::Direction d) const;
 
             /// Derive neighbourship relations on active cells in particular
-            /// Cartesian directions.
+            /// Cartesian directions and capture transmissibilty field.
             ///
             /// Writes to \c neigh_ and \c outCell_.
             ///
@@ -487,6 +527,13 @@ ECL::getPVolVector(const ecl_grid_type*        G,
 
         assert ((pvol.size() == nglob) &&
                 "Pore-volume must be provided for all global cells");
+
+        const auto pvol_unit =
+            getUnitSystem(init, gridID)->reservoirVolume();
+
+        for (auto& pv : pvol) {
+            pv = ::Opm::unit::convert::from(pv, pvol_unit);
+        }
     }
 
     return pvol;
@@ -522,6 +569,18 @@ ECL::cartesianDimensions(const ecl_grid_type* G)
     return { { make_szt(ecl_grid_get_nx(G)) ,
                make_szt(ecl_grid_get_ny(G)) ,
                make_szt(ecl_grid_get_nz(G)) } };
+}
+
+auto ECL::getUnitSystem(const ::Opm::ECLResultData& rset,
+                        const int                   grid_ID)
+    -> decltype(::Opm::ECLUnits::createUnitSystem(0))
+{
+    assert (rset.haveKeywordData(INTEHEAD_KW, grid_ID)
+            && "Result Set Does Not Provide Grid Header");
+
+    const auto ih = rset.keywordData<int>(INTEHEAD_KW, grid_ID);
+
+    return ::Opm::ECLUnits::createUnitSystem(ih[INTEHEAD_UNIT_INDEX]);
 }
 
 std::vector<ecl_nnc_type>
@@ -772,6 +831,7 @@ CartesianGridData(const ecl_grid_type*        G,
 
     // Too large, but this is a quick estimate.
     this->neigh_.reserve(3 * (2 * this->numCells()));
+    this->trans_.reserve(3 * (1 * this->numCells()));
 
     for (const auto d : { CartesianCells::Direction::I ,
                           CartesianCells::Direction::J ,
@@ -803,6 +863,12 @@ const std::vector<double>&
 ECL::CartesianGridData::activePoreVolume() const
 {
     return this->cells_.activePoreVolume();
+}
+
+const std::vector<double>&
+ECL::CartesianGridData::transmissibility() const
+{
+    return this->trans_;
 }
 
 int
@@ -871,7 +937,8 @@ haveConnData(const ::Opm::ECLResultData& src,
 std::vector<double>
 ECL::CartesianGridData::
 connectionData(const ::Opm::ECLResultData& src,
-               const std::string&          vector) const
+               const std::string&          vector,
+               const double                unit) const
 {
     if (! this->haveConnData(src, vector)) {
         return {};
@@ -883,7 +950,7 @@ connectionData(const ::Opm::ECLResultData& src,
                            CartesianCells::Direction::J ,
                            CartesianCells::Direction::K })
     {
-        this->connectionData(src, d, vector, x);
+        this->connectionData(src, d, this->vectorName(vector, d), unit, x);
     }
 
     return x;
@@ -894,10 +961,10 @@ ECL::CartesianGridData::
 connectionData(const ::Opm::ECLResultData&     src,
                const CartesianCells::Direction d,
                const std::string&              vector,
+               const double                    unit,
                std::vector<double>&            x) const
 {
-    const auto vname = this->vectorName(vector, d);
-    const auto v = this->cellData(src, vname);
+    const auto v = this->cellData(src, vector);
 
     const auto& cells = this->outCell_.find(d);
 
@@ -905,7 +972,7 @@ connectionData(const ::Opm::ECLResultData&     src,
             "Direction must be I, J, or K");
 
     for (const auto& cell : cells->second) {
-        x.push_back(v[cell]);
+        x.push_back(::Opm::unit::convert::from(v[cell], unit));
     }
 }
 
@@ -951,6 +1018,14 @@ deriveNeighbours(const std::vector<std::size_t>& gcells,
         ? this->cellData(init, tran)
         : std::vector<double>(this->cells_.numGlobalCells(), 1.0);
 
+    const auto trans_unit =
+        ECL::getUnitSystem(init, this->gridID_)->transmissibility();
+
+    auto SI_trans = [trans_unit](const double trans)
+    {
+        return ::Opm::unit::convert::from(trans, trans_unit);
+    };
+
     auto& ocell = this->outCell_[d];
     ocell.reserve(gcells.size());
 
@@ -976,6 +1051,7 @@ deriveNeighbours(const std::vector<std::size_t>& gcells,
                 this->neigh_.push_back(other);
 
                 ocell.push_back(globID);
+                this->trans_.push_back(SI_trans(T[globID]));
             }
         }
     }
@@ -1049,9 +1125,32 @@ public:
     /// strictly positive.
     std::vector<double> activePoreVolume() const;
 
-    const ::Opm::ECLResultData& rawResultData() const;
+    /// Retrieve static (background) transmissibility values on all
+    /// connections defined by \code neighbours() \endcode.
+    ///
+    /// Specifically, \code transmissibility()[i] \endcode is the
+    /// transmissibility of the connection between cells \code
+    /// neighbours()[2*i + 0] \endcode and \code neighbours()[2*i + 1]
+    /// \endcode.
+    std::vector<double> transmissibility() const;
 
+    /// Restrict dynamic result set data to single report step.
+    ///
+    /// This method must be called before calling either flux() or
+    /// rawResultData().
+    ///
+    /// \param[in] rptstep Selected temporal vector.  Report-step ID.
+    ///
+    /// \return Whether or not dynamic data for the requested report step
+    ///    exists in the underlying result set identified in method
+    ///    assignDataSource().
     bool selectReportStep(const int rptstep) const;
+
+    /// Access underlying result set.
+    ///
+    /// The result set dynamic data corresponds to the most recent call to
+    /// method selectReportStep().
+    const ::Opm::ECLResultData& rawResultData() const;
 
     /// Retrive phase flux on all connections defined by \code neighbours()
     /// \endcode.
@@ -1186,9 +1285,14 @@ private:
         /// \param[in] offset Start index into global linear number for all
         ///    active grids.
         ///
+        /// \param[in] trans_unit Unit of measurement of transmissibility
+        ///    field stored in result set.  Used to convert values to the
+        ///    strict SI conventions (i.e., rm^3).
+        ///
         /// \param[in] nnc Non-neighbouring connection from result set.
         void add(const std::vector<ECL::CartesianGridData>& grids,
                  const std::vector<std::size_t>&            offset,
+                 const double                               trans_unit,
                  const ecl_nnc_type&                        nnc);
 
         std::vector<Category> allCategories() const;
@@ -1198,6 +1302,10 @@ private:
 
         /// Access all active non-neighbouring connections.
         const std::vector<int>& getNeighbours() const;
+
+        /// Access transmissibility field of all active non-neighbouring
+        /// connections.  Numerical values in strict SI units (rm^3).
+        const std::vector<double>& transmissibility() const;
 
         /// Retrieve all non-neighbouring connections of a particular
         /// category (i.e., pertaining to a particular set of keywords).
@@ -1214,6 +1322,13 @@ private:
         /// in linear numbering of all model's active cells.
         std::vector<int> neigh_;
 
+        /// Transmissibility of non-Cartesian (non-neighbouring) connections.
+        ///
+        /// Note that \code trans_[i] \endcode is the transmissibility of
+        /// the connection between cells \code neigh_[2*i + 0] \endcode and
+        /// \code neigh_[2*i + 1] \endcode.
+        std::vector<double> trans_;
+
         /// Collection of
         KeywordIndexMap keywords_;
 
@@ -1221,7 +1336,9 @@ private:
         ///
         /// Simplifies implementation of ctor.
         ///
-        /// \param[in] cat Class
+        /// \param[in] cat Requested category of flux relation.
+        ///
+        /// \return Flux relation of type \p cat.
         FluxRelation makeRelation(const Category cat) const;
 
         /// Identify connection category from connection's grids.
@@ -1312,15 +1429,29 @@ private:
     /// Extract flux values corresponding to particular result set vector
     /// for all identified non-neighbouring connections.
     ///
+    /// \tparam[in] GetFluxUnit Type of function object for computing the
+    ///    grid-dependent flux unit.
+    ///
     /// \param[in] vector Result set vector prefix.  Typically computed by
     ///    method flowVector().
+    ///
+    /// \param[in] fluxUnit Function object for computing grid-dependent
+    ///    flux units.  Must support the syntax
+    ///    \code
+    ///      unit = fluxUnit(gridID)
+    ///    \endcode
+    ///    with 'gridID' being a non-negative \c int that identifies a
+    ///    particular model grid (zero for the main grid and positive for
+    ///    LGRs) and 'unit' a positive floating-point value.
     ///
     /// \param[in,out] flux Numerical values of result set vector.  On
     ///    input, contains all values corresponding to all fully Cartesian
     ///    connections across all active grids.  On output additionally
     ///    contains those values that correspond to the non-neighbouring
     ///    connections (appended onto \p flux).
+    template <class GetFluxUnit>
     void fluxNNC(const std::string&   vector,
+                 GetFluxUnit&&        fluxUnit,
                  std::vector<double>& flux) const;
 };
 
@@ -1371,6 +1502,7 @@ void
 Opm::ECLGraph::Impl::
 NNC::add(const std::vector<ECL::CartesianGridData>& grid,
          const std::vector<std::size_t>&            offset,
+         const double                               trans_unit,
          const ecl_nnc_type&                        nnc)
 {
     if (! this->isViable(grid, nnc)) {
@@ -1395,6 +1527,10 @@ NNC::add(const std::vector<ECL::CartesianGridData>& grid,
         this->neigh_.push_back(o + c);
     }
 
+    // Capture transmissibility field to support on-demand flux calculations
+    // if flux fields are not output to the on-disk result set.
+    this->trans_.push_back(unit::convert::from(nnc.trans, trans_unit));
+
     const auto cat = this->classifyConnection(nnc.grid_nr1, nnc.grid_nr2);
 
     auto entry = NonNeighKeywordIndexSet::Map {
@@ -1411,15 +1547,22 @@ NNC::add(const std::vector<ECL::CartesianGridData>& grid,
 std::size_t
 Opm::ECLGraph::Impl::NNC::numConnections() const
 {
-    assert (this->neigh_.size() % 2 == 0);
+    assert ((this->neigh_.size() % 2) == 0);
+    assert ((this->neigh_.size() / 2) == this->trans_.size());
 
-    return this->neigh_.size() / 2;
+    return this->trans_.size();
 }
 
 const std::vector<int>&
 Opm::ECLGraph::Impl::NNC::getNeighbours() const
 {
     return this->neigh_;
+}
+
+const std::vector<double>&
+Opm::ECLGraph::Impl::NNC::transmissibility() const
+{
+    return this->trans_;
 }
 
 const Opm::ECLGraph::Impl::NNC::FluxRelation&
@@ -1625,6 +1768,34 @@ Opm::ECLGraph::Impl::activePoreVolume() const
     return pvol;
 }
 
+std::vector<double>
+Opm::ECLGraph::Impl::transmissibility() const
+{
+    auto trans = std::vector<double>{};
+
+    // Recall: this->numConnections() includes NNCs.
+    const auto totconn = this->numConnections();
+    trans.reserve(totconn);
+
+    for (const auto& G : this->grid_) {
+        const auto& Ti = G.transmissibility();
+
+        trans.insert(trans.end(), Ti.begin(), Ti.end());
+    }
+
+    if (this->nnc_.numConnections() > 0) {
+        const auto& tranNNC = this->nnc_.transmissibility();
+
+        trans.insert(trans.end(), tranNNC.begin(), tranNNC.end());
+    }
+
+    if (trans.size() < totconn) {
+        return {};
+    }
+
+    return trans;
+}
+
 const ::Opm::ECLResultData&
 Opm::ECLGraph::Impl::rawResultData() const
 {
@@ -1640,6 +1811,11 @@ std::vector<double>
 Opm::ECLGraph::Impl::
 flux(const PhaseIndex phase) const
 {
+    auto fluxUnit = [this](const int gridID)
+    {
+        return ::ECL::getUnitSystem(*this->src_, gridID)->reservoirRate();
+    };
+
     const auto vector = this->flowVector(phase);
 
     auto v = std::vector<double>{};
@@ -1649,8 +1825,10 @@ flux(const PhaseIndex phase) const
 
     v.reserve(totconn);
 
+    auto gridID = 0;
     for (const auto& G : this->grid_) {
-        const auto& q = G.connectionData(*this->src_, vector);
+        const auto& q =
+            G.connectionData(*this->src_, vector, fluxUnit(gridID++));
 
         if (q.empty()) {
             // Flux vector invalid unless all grids provide this result
@@ -1665,7 +1843,7 @@ flux(const PhaseIndex phase) const
         // Model includes non-neighbouring connections such as faults and/or
         // local grid refinement.  Extract pertinent flux values for these
         // connections.
-        this->fluxNNC(vector, v);
+        this->fluxNNC(vector, std::move(fluxUnit), v);
     }
 
     if (v.size() < totconn) {
@@ -1681,13 +1859,21 @@ void
 Opm::ECLGraph::Impl::defineNNCs(const ecl_grid_type*        G,
                                 const ::Opm::ECLResultData& init)
 {
+    // Assume all transmissibilites in the result set follow the same unit
+    // conventions.
+
+    const auto trans_unit =
+        ECL::getUnitSystem(init, 0)->transmissibility();
+
     for (const auto& nnc : ECL::loadNNC(G, init)) {
-        this->nnc_.add(this->grid_, this->activeOffset_, nnc);
+        this->nnc_.add(this->grid_, this->activeOffset_, trans_unit, nnc);
     }
 }
 
+template <class GetFluxUnit>
 void
 Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
+                             GetFluxUnit&&        fluxUnit,
                              std::vector<double>& flux) const
 {
     auto v = std::vector<double>(this->nnc_.numConnections(), 0.0);
@@ -1719,13 +1905,17 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
                 continue;
             }
 
+            // Note: Compensate for incrementing 'gridID' above.
+            const auto flux_unit = fluxUnit(gridID - 1);
+
             // Data fully available for (category,gridID).  Assign
             // approriate subset of NNC flux vector.
             for (const auto& ix : iset) {
                 assert (ix.neighIdx < v.size());
                 assert (ix.kwIdx    < q.size());
 
-                v[ix.neighIdx] = q[ix.kwIdx];
+                v[ix.neighIdx] =
+                    unit::convert::from(q[ix.kwIdx], flux_unit);
 
                 assigned[ix.neighIdx] = true;
             }
@@ -1842,6 +2032,11 @@ std::vector<int> Opm::ECLGraph::neighbours() const
 std::vector<double> Opm::ECLGraph::poreVolume() const
 {
     return this->pImpl_->activePoreVolume();
+}
+
+std::vector<double> Opm::ECLGraph::transmissibility() const
+{
+    return this->pImpl_->transmissibility();
 }
 
 bool Opm::ECLGraph::selectReportStep(const int rptstep) const
