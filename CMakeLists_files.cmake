@@ -36,6 +36,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         examples/computeToFandTracers.cpp
         examples/computeTracers.cpp
         tests/runAcceptanceTest.cpp
+        tests/runLinearisedCellDataTest.cpp
         tests/runTransTest.cpp
         )
 
