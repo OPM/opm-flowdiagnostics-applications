@@ -157,6 +157,11 @@ namespace {
                               const ::Opm::ECLResultData& init,
                               const int                   gridID);
 
+            /// Retrieve non-negative numeric ID of grid instance.
+            ///
+            /// \return Constructor's \c gridID parameter.
+            int gridID() const;
+
             /// Retrieve number of active cells in graph.
             std::size_t numCells() const;
 
@@ -900,6 +905,11 @@ CartesianGridData(const ecl_grid_type*        G,
     {
         this->deriveNeighbours(gcells, init, d);
     }
+}
+
+int ECL::CartesianGridData::gridID() const
+{
+    return this->gridID_;
 }
 
 std::size_t
@@ -1910,10 +1920,9 @@ flux(const PhaseIndex phase) const
 
     v.reserve(totconn);
 
-    auto gridID = 0;
     for (const auto& G : this->grid_) {
         const auto& q =
-            G.connectionData(*this->src_, vector, fluxUnit(gridID++));
+            G.connectionData(*this->src_, vector, fluxUnit(G.gridID()));
 
         if (q.empty()) {
             // Flux vector invalid unless all grids provide this result
@@ -1968,19 +1977,14 @@ Opm::ECLGraph::Impl::linearisedCellData(const std::string& vector,
 {
     auto x = std::vector<double>{};  x.reserve(this->numCells());
 
-    auto gridID = 0;
-
     for (const auto& G : this->grid_) {
         const auto xi = G.activeCellData<double>(*this->src_, vector);
-
-        // Increment Grid ID irrespective of early return.
-        gridID += 1;
 
         if (xi.empty()) { continue; }
 
         // Note: Compensate for incrementing Grid ID above.
         const auto usys =
-            ECL::getUnitSystem(*this->src_, gridID - 1);
+            ECL::getUnitSystem(*this->src_, G.gridID());
 
         // Note: 'usys' (generally, std::unique_ptr<>) does not support
         // regular PMF syntax (i.e., operator->*()).
@@ -2029,13 +2033,11 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
         const auto& rel    = this->nnc_.getRelations(cat);
         const auto  fluxID = rel.makeKeyword(vector);
 
-        auto gridID = 0;
         for (const auto& G : this->grid_) {
-            const auto& iset = rel.indexSet().getGridCollection(gridID);
+            const auto gridID = G.gridID();
 
-            // Must increment grid ID irrespective of early break of
-            // iteration.
-            gridID += 1;
+            const auto& iset =
+                rel.indexSet().getGridCollection(gridID);
 
             if (iset.empty()) {
                 // No NNCs for this category in this grid.  Skip.
@@ -2051,8 +2053,7 @@ Opm::ECLGraph::Impl::fluxNNC(const std::string&   vector,
                 continue;
             }
 
-            // Note: Compensate for incrementing 'gridID' above.
-            const auto flux_unit = fluxUnit(gridID - 1);
+            const auto flux_unit = fluxUnit(gridID);
 
             // Data fully available for (category,gridID).  Assign
             // approriate subset of NNC flux vector.
