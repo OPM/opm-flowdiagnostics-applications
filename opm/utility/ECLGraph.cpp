@@ -284,15 +284,26 @@ namespace {
                 std::vector<T>
                 scatterToGlobal(const std::vector<T>& x) const;
 
-                /// Map input vector to active grid cells.
+                /// Restrict input vector to active grid cells.
+                ///
+                /// Selects subsets corresponding to active cells (i.e.,
+                /// those cells for which \code pore_volume > 0 \endcode) if
+                /// input size is
+                ///
+                ///   - All global cells
+                ///   - Explicitly active cells (ACTNUM != 0)
+                ///
+                /// All other cases are returned unfiltered--i.e., as direct
+                /// copies of the input.
                 ///
                 /// \param[in] x Input vector, defined on the explicitly
                 ///              active cells, all global cells or some
                 ///              other subset (e.g., all non-neighbouring
                 ///              connections).
                 ///
-                /// \return Input vector mapped to active cells or unchanged
-                /// if input is defined on some other subset.
+                /// \return Input vector restricted to active cells if
+                ///    subset known.  Direct copy if \p x is defined on set
+                ///    other than explicitly active or all global cells.
                 template <typename T>
                 std::vector<T>
                 gatherToActive(const std::vector<T>& x) const;
