@@ -217,6 +217,11 @@ namespace {
             cellData(const ::Opm::ECLResultData& src,
                      const std::string&          vector) const;
 
+            template <typename T>
+            std::vector<T>
+            activeCellData(const ::Opm::ECLResultData& src,
+                           const std::string&          vector) const;
+
             /// Retrieve values of result set vector for all Cartesian
             /// connections in grid.
             ///
@@ -273,6 +278,19 @@ namespace {
                 template <typename T>
                 std::vector<T>
                 scatterToGlobal(const std::vector<T>& x) const;
+
+                /// Map input vector to active grid cells.
+                ///
+                /// \param[in] x Input vector, defined on the explicitly
+                ///              active cells, all global cells or some
+                ///              other subset (e.g., all non-neighbouring
+                ///              connections).
+                ///
+                /// \return Input vector mapped to active cells or unchanged
+                /// if input is defined on some other subset.
+                template <typename T>
+                std::vector<T>
+                gatherToActive(const std::vector<T>& x) const;
 
                 /// Retrieve total number of cells in grid, including
                 /// inactive ones.
@@ -349,13 +367,8 @@ namespace {
                 /// Whether or not a particular active cell is subdivided.
                 std::vector<bool> is_divided_;
 
-                /// Identify those grid cells that are further subdivided by
-                /// an LGR.
-                ///
-                /// Writes to \c is_divided_.
-                ///
-                /// \param
-                void identifySubdividedCells(const ecl_grid_type* G);
+                /// Retrieve number of active cells in grid.
+                std::size_t numActiveCells() const;
 
                 /// Compute linear index of global cell from explicit
                 /// (I,J,K) tuple.
@@ -672,7 +685,7 @@ std::vector<std::size_t>
 ECL::CartesianGridData::CartesianCells::activeGlobal() const
 {
     auto active = std::vector<std::size_t>{};
-    active.reserve(this->rsMap_.subset.size());
+    active.reserve(this->numActiveCells());
 
     for (const auto& id : this->rsMap_.subset) {
         active.push_back(id.glob);
@@ -714,6 +727,48 @@ CartesianCells::scatterToGlobal(const std::vector<T>& x) const
 
     return y;
 }
+
+namespace { namespace ECL {
+    template <typename T>
+    std::vector<T>
+    CartesianGridData::CartesianCells::
+    gatherToActive(const std::vector<T>& x) const
+    {
+        const auto num_explicit_active =
+            static_cast<decltype(x.size())>(this->rsMap_.num_active);
+
+        if (x.size() == num_explicit_active) {
+            // Input defined on explictly active cells (ACTNUM != 0).
+            // Extract subset of these.
+
+            auto ax = std::vector<T>{};
+            ax.reserve(this->numActiveCells());
+
+            for (const auto& i : this->rsMap_.subset) {
+                ax.push_back(x[i.act]);
+            }
+
+            return ax;
+        }
+
+        if (x.size() == this->numGlobalCells()) {
+            // Input defined on all global cells.  Extract active subset.
+
+            auto ax = std::vector<T>{};
+            ax.reserve(this->numActiveCells());
+
+            for (const auto& i : this->rsMap_.subset) {
+                ax.push_back(x[i.glob]);
+            }
+
+            return ax;
+        }
+
+        // Input defined on neither explicitly active nor global cells.
+        // Possibly on all grid's NNCs.  Let caller deal with this.
+        return x;
+    }
+}} // namespace Anonymous::ECL
 
 std::size_t
 ECL::CartesianGridData::CartesianCells::numGlobalCells() const
@@ -777,6 +832,12 @@ ECL::CartesianGridData::CartesianCells::isSubdivided(const int cellID) const
     return this->is_divided_[ix];
 }
 
+std::size_t
+ECL::CartesianGridData::CartesianCells::numActiveCells() const
+{
+    return this->rsMap_.subset.size();
+}
+    
 std::size_t
 ECL::CartesianGridData::
 CartesianCells::globIdx(const IndexTuple& ijk) const
@@ -904,6 +965,22 @@ cellData(const ::Opm::ECLResultData& src,
 
     return this->cells_.scatterToGlobal(x);
 }
+
+namespace { namespace ECL {
+    template <typename T>
+    std::vector<T>
+    CartesianGridData::activeCellData(const ::Opm::ECLResultData& src,
+                                      const std::string&          vector) const
+    {
+        if (! this->haveCellData(src, vector)) {
+            return {};
+        }
+
+        auto x = src.keywordData<T>(vector, this->gridID_);
+
+        return this->cells_.gatherToActive(std::move(x));
+    }
+}} // namespace Anonymous::ECL
 
 bool
 ECL::CartesianGridData::
@@ -1166,6 +1243,14 @@ public:
     /// all).
     std::vector<double>
     flux(const PhaseIndex phase) const;
+
+    template <typename T>
+    std::vector<T>
+    rawLinearisedCellData(const std::string& vector) const;
+
+    std::vector<double>
+    linearisedCellData(const std::string& vector,
+                       UnitConvention     unit) const;
 
 private:
     /// Collection of non-Cartesian neighbourship relations attributed to a
@@ -1855,6 +1940,69 @@ flux(const PhaseIndex phase) const
     return v;
 }
 
+namespace Opm {
+
+    template <typename T>
+    std::vector<T>
+    ECLGraph::Impl::rawLinearisedCellData(const std::string& vector) const
+    {
+        auto x = std::vector<T>{};  x.reserve(this->numCells());
+
+        for (const auto& G : this->grid_) {
+            const auto xi =
+                G.template activeCellData<T>(*this->src_, vector);
+
+            x.insert(x.end(), std::begin(xi), std::end(xi));
+        }
+
+        if (x.size() != this->numCells()) {
+            return {};
+        }
+
+        return x;
+    }
+} // namespace Opm
+
+std::vector<double>
+Opm::ECLGraph::Impl::linearisedCellData(const std::string& vector,
+                                        UnitConvention     unit) const
+{
+    auto x = std::vector<double>{};  x.reserve(this->numCells());
+
+    auto gridID = 0;
+
+    for (const auto& G : this->grid_) {
+        const auto xi =
+            G.activeCellData<double>(*this->src_, vector);
+
+        // Increment Grid ID irrespective of early return.
+        gridID += 1;
+
+        if (xi.empty()) { continue; }
+
+        // Note: Compensate for incrementing Grid ID above.
+        const auto usys =
+            ECL::getUnitSystem(*this->src_, gridID - 1);
+
+        // Note: 'usys' (generally, std::unique_ptr<>) does not support
+        // regular PMF syntax (i.e., operator->*()).
+        const auto vector_unit = ((*usys).*unit)();
+
+        std::transform(std::begin(xi), std::end(xi),
+                       std::back_inserter(x),
+            [vector_unit](const double value)
+            {
+                return ::Opm::unit::convert::from(value, vector_unit);
+            });
+    }
+
+    if (x.size() != this->numCells()) {
+        return {};
+    }
+
+    return x;
+}
+
 void
 Opm::ECLGraph::Impl::defineNNCs(const ecl_grid_type*        G,
                                 const ::Opm::ECLResultData& init)
@@ -2055,4 +2203,29 @@ Opm::ECLGraph::
 flux(const PhaseIndex phase) const
 {
     return this->pImpl_->flux(phase);
+}
+
+namespace Opm {
+
+    template <typename T>
+    std::vector<T>
+    ECLGraph::rawLinearisedCellData(const std::string& vector) const
+    {
+        return this->pImpl_->template rawLinearisedCellData<T>(vector);
+    }
+
+    // Explicit instantiations for the element types we care about.
+    template std::vector<int>
+    ECLGraph::rawLinearisedCellData<int>(const std::string& vector) const;
+
+    template std::vector<double>
+    ECLGraph::rawLinearisedCellData<double>(const std::string& vector) const;
+
+} // namespace Opm
+
+std::vector<double>
+Opm::ECLGraph::linearisedCellData(const std::string& vector,
+                                  UnitConvention     unit) const
+{
+    return this->pImpl_->linearisedCellData(vector, unit);
 }

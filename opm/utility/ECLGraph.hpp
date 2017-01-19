@@ -22,6 +22,7 @@
 #define OPM_ECLGRAPH_HEADER_INCLUDED
 
 #include <opm/utility/ECLResultData.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
 
 #include <array>
 #include <cstddef>
@@ -180,6 +181,43 @@ namespace Opm {
         ///    (rm^3/s).
         std::vector<double>
         flux(const PhaseIndex phase) const;
+
+        /// Retrieve result set vector from current view (e.g., particular
+        /// report step) linearised on active cells.
+        ///
+        /// \tparam T Element type of result set vector.
+        ///
+        /// \param[in] vector Name of result set vector.
+        ///
+        /// \return Result set vector linearised on active cells.
+        template <typename T>
+        std::vector<T>
+        rawLinearisedCellData(const std::string& vector) const;
+
+        /// Convenience type alias for \c UnitSystem PMFs.
+        typedef double (ECLUnits::UnitSystem::*UnitConvention)() const;
+
+        /// Retrieve floating-point result set vector from current view
+        /// (e.g., particular report step) linearised on active cells and
+        /// converted to strict SI unit conventions.
+        ///
+        /// Typical call:
+        /// \code
+        ///  const auto press =
+        ///      lCD("PRESSURE", &ECLUnits::UnitSystem::pressure);
+        /// \endcode
+        ///
+        /// \param[in] vector Name of result set vector.
+        ///
+        /// \param[in] unit Call-back hook in \c UnitSystem implementation
+        ///    that enables converting the raw result data to strict SI unit
+        ///    conventions.  Hook is called for each grid in the result set.
+        ///
+        /// \return Result set vector linearised on active cells, converted
+        ///    to strict SI unit conventions.
+        std::vector<double>
+        linearisedCellData(const std::string& vector,
+                           UnitConvention     unit) const;
 
     private:
         /// Implementation class.
