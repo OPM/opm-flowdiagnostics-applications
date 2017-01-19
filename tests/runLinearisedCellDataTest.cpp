@@ -535,12 +535,19 @@ try {
     const auto tol   = testTolerances(setup.param);
     const auto press = setup.graph.rawLinearisedCellData<double>("PRESSURE");
 
+    const auto press_SI = setup.graph
+        .linearisedCellData("PRESSURE", &Opm::ECLUnits::UnitSystem::pressure);
+
     const auto ok = (press.size() == 9220) &&
         ((press[19] - 360.937286376953e+000) < tol.absolute);
 
-    std::cout << (ok ? "OK" : "FAIL") << '\n';
+    const auto ok_SI = (press_SI.size() == 9220) &&
+        (std::abs(press_SI[19] - 36.0937286376953e+006) <
+         std::abs(tol.relative * 36.0937286376953e+006));
 
-    if (! ok) {
+    std::cout << ((ok && ok_SI) ? "OK" : "FAIL") << '\n';
+
+    if (! (ok && ok_SI)) {
         return EXIT_FAILURE;
     }
 }
