@@ -28,6 +28,17 @@ Macro (add_trans_acceptance_test casename)
             "atol=${abs_tol}" "rtol=${rel_tol}")
 EndMacro (add_trans_acceptance_test)
 
+Macro (add_celldata_acceptance_test casename)
+
+  String (REGEX REPLACE "\\.[^.]*$" "" basename "${casename}")
+
+  Add_Test (NAME    CellData_accept_${casename}
+            COMMAND runLinearisedCellDataTest
+            "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
+            "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
+            "atol=${abs_tol}" "rtol=${rel_tol}")
+EndMacro (add_celldata_acceptance_test)
+
 If (NOT TARGET test-suite)
   Add_Custom_Target (test-suite)
 EndIf ()
@@ -36,3 +47,4 @@ EndIf ()
 
 Add_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
 Add_Trans_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
+Add_CellData_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
