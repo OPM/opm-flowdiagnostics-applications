@@ -194,7 +194,8 @@ namespace Opm {
         std::vector<T>
         rawLinearisedCellData(const std::string& vector) const;
 
-        /// Convenience type alias for \c UnitSystem PMFs.
+        /// Convenience type alias for \c UnitSystem PMFs (pointer to member
+        /// function).
         typedef double (ECLUnits::UnitSystem::*UnitConvention)() const;
 
         /// Retrieve floating-point result set vector from current view
