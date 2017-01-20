@@ -1206,7 +1206,7 @@ public:
     /// Retrieve number of active cells in graph.
     std::size_t numCells() const;
 
-    /// Retrive number of connections in graph.
+    /// Retrieve number of connections in graph.
     std::size_t numConnections() const;
 
     /// Retrieve the simulation scenario's active phases.
@@ -1215,14 +1215,14 @@ public:
     /// flux() may return non-zero values.
     const std::vector<PhaseIndex>& activePhases() const;
 
-    /// Retrive neighbourship relations between active cells.
+    /// Retrieve neighbourship relations between active cells.
     ///
     /// The \c i-th connection is between active cells \code
     /// neighbours()[2*i + 0] \endcode and \code neighbours()[2*i + 1]
     /// \endcode.
     std::vector<int> neighbours() const;
 
-    /// Retrive static pore-volume values on active cells only.
+    /// Retrieve static pore-volume values on active cells only.
     ///
     /// Corresponds to the \c PORV vector in the INIT file, possibly
     /// restricted to those active cells for which the pore-volume is
@@ -1256,7 +1256,7 @@ public:
     /// method selectReportStep().
     const ::Opm::ECLResultData& rawResultData() const;
 
-    /// Retrive phase flux on all connections defined by \code neighbours()
+    /// Retrieve phase flux on all connections defined by \code neighbours()
     /// \endcode.
     ///
     /// \param[in] phase Canonical phase for which to retrive flux.

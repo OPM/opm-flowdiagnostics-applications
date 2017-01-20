@@ -175,10 +175,10 @@ namespace Opm {
         /// to method selectReportStep().
         const ::Opm::ECLResultData& rawResultData() const;
 
-        /// Retrive phase flux on all connections defined by \code
+        /// Retrieve phase flux on all connections defined by \code
         /// neighbours() \endcode.
         ///
-        /// \param[in] phase Canonical phase for which to retrive flux.
+        /// \param[in] phase Canonical phase for which to retrieve flux.
         ///
         /// \return Flux values corresponding to selected phase.  Empty if
         ///    unavailable in the result set (e.g., when querying the gas
