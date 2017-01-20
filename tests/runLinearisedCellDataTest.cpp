@@ -29,6 +29,7 @@
 #include <functional>
 #include <iomanip>
 #include <iostream>
+#include <map>
 #include <numeric>
 #include <sstream>
 #include <stdexcept>
@@ -37,6 +38,7 @@
 #include <utility>
 #include <vector>
 
+#include <boost/algorithm/string/case_conv.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/regex.hpp>
@@ -150,9 +152,46 @@ namespace StringUtils {
 } // namespace StringUtils
 
 namespace {
-    struct PoreVolume
+    struct Reference
     {
         std::vector<double> data;
+    };
+
+    struct Calculated
+    {
+        std::vector<double> data;
+    };
+
+    class VectorUnits
+    {
+    private:
+        using USys = ::Opm::ECLUnits::UnitSystem;
+
+    public:
+        using UnitConvention = ::Opm::ECLGraph::UnitConvention;
+
+        VectorUnits()
+            : units_({ { "pressure", &USys::pressure } })
+        {
+        }
+
+        UnitConvention getUnit(const std::string& vector) const
+        {
+            auto p = units_.find(vector);
+
+            if (p == units_.end()) {
+                std::ostringstream os;
+
+                os << "Unsupported Vector Quantity '" << vector << '\'';
+
+                throw std::domain_error(os.str());
+            }
+
+            return p->second;
+        }
+
+    private:
+        std::map<std::string, UnitConvention> units_;
     };
 
     class VectorDifference
@@ -255,37 +294,25 @@ namespace {
         std::vector<ErrorMeasurement> relative;
     };
 
-    struct ReferenceToF
+    struct ReferenceSolution
     {
-        std::vector<double> forward;
-        std::vector<double> reverse;
+        std::vector<double> raw;
+        std::vector<double> SI;
     };
 
     template <class FieldVariable>
-    double volumeMetric(const PoreVolume&    pv,
-                        const FieldVariable& x)
+    double volumeMetric(const FieldVariable& x)
     {
-        if (x.size() != pv.data.size()) {
-            std::ostringstream os;
+        auto result = 0.0;
 
-            os << "Incompatible Array Sizes: Expected 2x"
-               << pv.data.size() << ", but got ("
-               << pv.data.size() << ", " << x.size() << ')';
-
-            throw std::domain_error(os.str());
-        }
-
-        auto num = 0.0;
-        auto den = 0.0;
-
-        for (decltype(pv.data.size())
-                 i = 0, n = pv.data.size(); i < n; ++i)
+        for (decltype(x.size())
+                 i = 0, n = x.size(); i < n; ++i)
         {
-            num += std::abs(x[i]) * pv.data[i];
-            den +=                  pv.data[i];
+            const auto m = std::abs(x[i]);
+            result += m * m;
         }
 
-        return num / den;
+        return std::sqrt(result / x.size());
     }
 
     template <class FieldVariable>
@@ -358,6 +385,13 @@ namespace {
         return ErrorTolerance{ atol, rtol };
     }
 
+    std::vector<std::string>
+    testQuantities(const ::Opm::parameter::ParameterGroup& param)
+    {
+        return StringUtils::VectorValue::
+            get<std::string>(param.get<std::string>("quant"));
+    }
+
     int numDigits(const std::vector<int>& steps)
     {
         if (steps.empty()) {
@@ -376,8 +410,9 @@ namespace {
         return std::floor(std::log10(static_cast<double>(m))) + 1;
     }
 
-    ReferenceToF
+    ReferenceSolution
     loadReference(const ::Opm::parameter::ParameterGroup& param,
+                  const std::string&                      quant,
                   const int                               step,
                   const int                               nDigits)
     {
@@ -385,79 +420,71 @@ namespace {
 
         using VRef = std::reference_wrapper<std::vector<double>>;
 
-        auto fname = fs::path(param.get<std::string>("ref-dir"));
-        {
-            std::ostringstream os;
+        auto x   = ReferenceSolution{};
+        auto ref = std::array<VRef,2>{{ std::ref(x.raw) ,
+                                        std::ref(x.SI ) }};
 
-            os << "tof-" << std::setw(nDigits) << std::setfill('0')
-               << step << ".txt";
+        auto i = 0;
 
-            fname /= os.str();
-        }
+        for (const auto* q : { "raw", "SI" }) {
+            auto fname = fs::path(param.get<std::string>("ref-dir"))
+                / boost::algorithm::to_lower_copy(quant);
+            {
+                std::ostringstream os;
 
-        fs::ifstream input(fname);
+                os << q                  << '-'
+                   << std::setw(nDigits) << std::setfill('0')
+                   << step               << ".txt";
 
-        if (! input) {
-            std::ostringstream os;
-
-            os << "Unable to Open Reference Data File "
-               << fname.filename();
-
-            throw std::domain_error(os.str());
-        }
-
-        auto tof = ReferenceToF{};
-
-        auto ref = std::array<VRef,2>{{ std::ref(tof.forward) ,
-                                        std::ref(tof.reverse) }};
-
-        {
-            auto i = static_cast<decltype(ref[0].get().size())>(0);
-            auto t = 0.0;
-
-            while (input >> t) {
-                ref[i].get().push_back(t);
-
-                i = (i + 1) % 2;
+                fname /= os.str();
             }
+
+            fs::ifstream input(fname);
+
+            if (input) {
+                ref[i].get().assign(std::istream_iterator<double>(input),
+                                    std::istream_iterator<double>());
+            }
+
+            i += 1;
         }
 
-        if (tof.forward.size() != tof.reverse.size()) {
+        if (x.raw.size() != x.SI.size()) {
             std::ostringstream os;
 
-            os << "Unable to Read Consistent ToF Reference Data From "
-               << fname.filename();
+            os << "Unable to Read Consistent Reference Data From '"
+               << param.get<std::string>("ref-dir") << "' In Step "
+               << step;
 
             throw std::out_of_range(os.str());
         }
 
-        return tof;
+        return x;
     }
 
-    void computeErrors(const PoreVolume&                       pv,
-                       const std::vector<double>&              ref,
-                       const ::Opm::FlowDiagnostics::Solution& fd,
-                       AggregateErrors&                        E)
+    void computeErrors(const Reference&  ref,
+                       const Calculated& calc,
+                       AggregateErrors&  E)
     {
-        const auto tof  = fd.timeOfFlight();
-        const auto diff = VectorDifference(tof, ref); //  tof - ref
+        const auto diff =
+            VectorDifference(calc.data, ref.data); //  calc - ref
 
         using Vector1  = std::decay<decltype(diff)>::type;
-        using Vector2  = std::decay<decltype(ref)>::type;
+        using Vector2  = std::decay<decltype(ref.data)>::type;
         using Ratio    = VectorRatio<Vector1, Vector2>;
 
-        const auto rat = Ratio(diff, ref); // (tof - ref) / ref
+        const auto rat = Ratio(diff, ref.data); // (tof - ref) / ref
 
         auto abs = ErrorMeasurement{};
         {
-            abs.volume = volumeMetric(pv, diff);
-            abs.inf    = pointMetric (    diff);
+            abs.volume = volumeMetric(diff);
+            abs.inf    = pointMetric (diff);
         }
 
         auto rel = ErrorMeasurement{};
         {
-            rel.volume = volumeMetric(pv, rat);
-            rel.inf    = pointMetric (    rat);
+            rel.volume = volumeMetric(rat);
+            rel.inf    = pointMetric (rat);
         }
 
         E.absolute.push_back(std::move(abs));
@@ -465,42 +492,44 @@ namespace {
     }
 
     std::array<AggregateErrors, 2>
-    sampleDifferences(example::Setup&&        setup,
-                      const std::vector<int>& steps)
+    sampleDifferences(const ::Opm::ECLGraph&                  graph,
+                      const ::Opm::parameter::ParameterGroup& param,
+                      const std::string&                      quant,
+                      const std::vector<int>&                 steps)
     {
+        const auto ECLquant = boost::algorithm::to_upper_copy(quant);
+
+        auto unit = VectorUnits()
+            .getUnit(boost::algorithm::to_lower_copy(quant));
+
         const auto start =
             std::vector<Opm::FlowDiagnostics::CellSet>{};
 
         const auto nDigits = numDigits(steps);
 
-        const auto pv = PoreVolume{ setup.graph.poreVolume() };
-
         auto E = std::array<AggregateErrors, 2>{};
 
         for (const auto& step : steps) {
-            if (step == 0) {
-                // Ignore initial condition
+            if (! graph.selectReportStep(step)) {
                 continue;
             }
 
-            if (! setup.selectReportStep(step)) {
-                continue;
-            }
-
-            const auto ref = loadReference(setup.param, step, nDigits);
+            const auto ref = loadReference(param, quant, step, nDigits);
 
             {
-                const auto fwd = setup.toolbox
-                    .computeInjectionDiagnostics(start);
+                const auto raw = Calculated {
+                    graph.rawLinearisedCellData<double>(ECLquant)
+                };
 
-                computeErrors(pv, ref.forward, fwd.fd, E[0]);
+                computeErrors(Reference{ ref.raw }, raw, E[0]);
             }
 
             {
-                const auto rev = setup.toolbox
-                    .computeProductionDiagnostics(start);
+                const auto SI = Calculated {
+                    graph.linearisedCellData(ECLquant, unit)
+                };
 
-                computeErrors(pv, ref.reverse, rev.fd, E[1]);
+                computeErrors(Reference{ ref.SI }, SI, E[1]);
             }
         }
 
@@ -528,26 +557,26 @@ namespace {
 
 int main(int argc, char* argv[])
 try {
-    auto setup = example::Setup(argc, argv);
+    const auto prm = example::initParam(argc, argv);
+    const auto pth = example::FilePaths(prm);
+    const auto tol = testTolerances(prm);
 
-    setup.selectReportStep(5);
+    const auto steps = availableReportSteps(pth);
+    const auto graph = example::initGraph(pth);
 
-    const auto tol   = testTolerances(setup.param);
-    const auto press = setup.graph.rawLinearisedCellData<double>("PRESSURE");
+    auto all_ok = true;
+    for (const auto& quant : testQuantities(prm)) {
+        const auto E = sampleDifferences(graph, prm, quant, steps);
 
-    const auto press_SI = setup.graph
-        .linearisedCellData("PRESSURE", &Opm::ECLUnits::UnitSystem::pressure);
+        const auto ok =
+            everythingFine(E[0], tol) && everythingFine(E[1], tol);
 
-    const auto ok = (press.size() == 9220) &&
-        ((press[19] - 360.937286376953e+000) < tol.absolute);
+        std::cout << quant << ": " << (ok ? "OK" : "FAIL") << '\n';
 
-    const auto ok_SI = (press_SI.size() == 9220) &&
-        (std::abs(press_SI[19] - 36.0937286376953e+006) <
-         std::abs(tol.relative * 36.0937286376953e+006));
+        all_ok = all_ok && ok;
+    }
 
-    std::cout << ((ok && ok_SI) ? "OK" : "FAIL") << '\n';
-
-    if (! (ok && ok_SI)) {
+    if (! all_ok) {
         return EXIT_FAILURE;
     }
 }
