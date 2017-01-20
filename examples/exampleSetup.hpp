@@ -29,6 +29,7 @@
 #include <opm/flowdiagnostics/ConnectionValues.hpp>
 #include <opm/flowdiagnostics/Toolbox.hpp>
 
+#include <opm/utility/ECLFluxCalc.hpp>
 #include <opm/utility/ECLGraph.hpp>
 #include <opm/utility/ECLWellSolution.hpp>
 
@@ -80,38 +81,31 @@ namespace example {
     }
 
     inline Opm::FlowDiagnostics::ConnectionValues
-    extractFluxField(const Opm::ECLGraph& G)
+    extractFluxField(const Opm::ECLGraph& G, const bool compute_fluxes)
     {
         using ConnVals = Opm::FlowDiagnostics::ConnectionValues;
-
-        using NConn = ConnVals::NumConnections;
-        using NPhas = ConnVals::NumPhases;
-
-        const auto nconn = NConn{G.numConnections()};
-        const auto nphas = NPhas{3};
-
-        auto flux = ConnVals(nconn, nphas);
+        auto flux = ConnVals(ConnVals::NumConnections{G.numConnections()},
+                             ConnVals::NumPhases{3});
 
         auto phas = ConnVals::PhaseID{0};
 
-        for (const auto& p : { Opm::ECLGraph::PhaseIndex::Aqua   ,
-                               Opm::ECLGraph::PhaseIndex::Liquid ,
-                               Opm::ECLGraph::PhaseIndex::Vapour })
+        Opm::ECLFluxCalc calc(G);
+
+        const auto phases = { Opm::ECLGraph::PhaseIndex::Aqua   ,
+                              Opm::ECLGraph::PhaseIndex::Liquid ,
+                              Opm::ECLGraph::PhaseIndex::Vapour };
+
+        for (const auto& p : phases)
         {
-            const auto pflux = G.flux(p);
-
+            const auto pflux = compute_fluxes ? calc.flux(p) : G.flux(p);
             if (! pflux.empty()) {
-                assert (pflux.size() == nconn.total);
-
+                assert (pflux.size() == flux.numConnections());
                 auto conn = ConnVals::ConnID{0};
-
                 for (const auto& v : pflux) {
                     flux(conn, phas) = v;
-
                     conn.id += 1;
                 }
             }
-
             phas.id += 1;
         }
 
@@ -215,6 +209,7 @@ namespace example {
             , graph(initGraph(file_paths))
             , well_fluxes()
             , toolbox(initToolbox(graph))
+            , compute_fluxes_(param.getDefault("compute_fluxes", false))
         {
             const int step = param.getDefault("step", 0);
             if (!selectReportStep(step)) {
@@ -231,7 +226,7 @@ namespace example {
             if (graph.selectReportStep(step)) {
                 auto wsol = Opm::ECLWellSolution{};
                 well_fluxes = wsol.solution(graph.rawResultData(), graph.numGrids());;
-                toolbox.assignConnectionFlux(extractFluxField(graph));
+                toolbox.assignConnectionFlux(extractFluxField(graph, compute_fluxes_));
                 toolbox.assignInflowFlux(extractWellFlows(graph, well_fluxes));
                 return true;
             } else {
@@ -244,6 +239,7 @@ namespace example {
         Opm::ECLGraph graph;
         std::vector<Opm::ECLWellSolution::WellData> well_fluxes;
         Opm::FlowDiagnostics::Toolbox toolbox;
+        bool compute_fluxes_ = false;
     };
 
 
