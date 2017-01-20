@@ -47,6 +47,9 @@ namespace Opm {
     public:
         using Path = boost::filesystem::path;
 
+        /// Enum for indicating requested phase from the flux() method.
+        enum class PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
+
         /// Disabled default constructor.
         ECLGraph() = delete;
 
@@ -125,6 +128,12 @@ namespace Opm {
         /// Retrieve number of connections in graph.
         std::size_t numConnections() const;
 
+        /// Retrieve the simulation scenario's active phases.
+        ///
+        /// Mostly useful to determine the set of \c PhaseIndex values for
+        /// which flux() will return non-zero values if data available.
+        const std::vector<PhaseIndex>& activePhases() const;
+
         /// Retrieve neighbourship relations between active cells.
         ///
         /// The \c i-th connection is between active cells \code
@@ -165,9 +174,6 @@ namespace Opm {
         /// The result set dynamic data corresponds to the most recent call
         /// to method selectReportStep().
         const ::Opm::ECLResultData& rawResultData() const;
-
-        /// Enum for indicating requested phase from the flux() method.
-        enum class PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
 
         /// Retrive phase flux on all connections defined by \code
         /// neighbours() \endcode.
