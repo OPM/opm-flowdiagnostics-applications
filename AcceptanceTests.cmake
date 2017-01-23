@@ -17,6 +17,9 @@ Macro (add_acceptance_test casename)
 
 EndMacro (add_acceptance_test)
 
+# Input
+#  - casename: with or without extension
+#
 Macro (add_trans_acceptance_test casename)
 
   String (REGEX REPLACE "\\.[^.]*$" "" basename "${casename}")
@@ -26,8 +29,12 @@ Macro (add_trans_acceptance_test casename)
             "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
             "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
             "atol=${abs_tol}" "rtol=${rel_tol}")
+
 EndMacro (add_trans_acceptance_test)
 
+# Input
+#   - casename: with or without extension
+#   - strings identifying which physical quantities to compare
 Macro (add_celldata_acceptance_test casename)
 
   String (REGEX REPLACE "\\.[^.]*$" "" basename "${casename}")
@@ -36,7 +43,8 @@ Macro (add_celldata_acceptance_test casename)
             COMMAND runLinearisedCellDataTest
             "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
             "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
-            "atol=${abs_tol}" "rtol=${rel_tol}")
+            "quant=${ARGN}" "atol=${abs_tol}" "rtol=${rel_tol}")
+
 EndMacro (add_celldata_acceptance_test)
 
 If (NOT TARGET test-suite)
@@ -47,4 +55,4 @@ EndIf ()
 
 Add_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
 Add_Trans_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
-Add_CellData_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR)
+Add_CellData_Acceptance_Test (SIMPLE_2PH_W_FAULT_LGR "pressure")
