@@ -18,6 +18,7 @@
 */
 
 #include <opm/utility/ECLFluxCalc.hpp>
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 namespace Opm
 {
@@ -56,8 +57,10 @@ namespace Opm
     {
         const int c1 = neighbours_[2*connection];
         const int c2 = neighbours_[2*connection + 1];
-        const double t = transmissibility_[connection];
-        return t * (pressure[c1] - pressure[c2]);
+        const double transmissibility = transmissibility_[connection];
+        const double viscosity = 1.0 * prefix::centi * unit::Poise;
+        const double mobility = 1.0 / viscosity;
+        return mobility * transmissibility * (pressure[c1] - pressure[c2]);
     }
 
 
