@@ -60,12 +60,13 @@ try {
     const std::string id_string = setup.param.getDefault("id", start.front().id().to_string());
     const ID id(id_string);
 
-    // Get local tof for injector.
-    const auto& tof = sol.fd.timeOfFlight(id);
+    // Get local data for injector.
+    const bool tracer = setup.param.getDefault("tracer", false);
+    const auto& data = tracer ? sol.fd.concentration(id) : sol.fd.timeOfFlight(id);
 
     // Write it to standard out.
     std::cout.precision(16);
-    for (auto item : tof) {
+    for (auto item : data) {
         std::cout << item.first << "   " << item.second << '\n';
     }
 }
