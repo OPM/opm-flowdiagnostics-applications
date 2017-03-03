@@ -22,15 +22,17 @@
 #include <config.h>
 #endif
 
-#include "exampleSetup.hpp"
-#include "opm/utility/ECLResultData.hpp"
+#include <opm/core/utility/parameters/ParameterGroup.hpp>
+#include <opm/utility/ECLResultData.hpp>
 
 
 // Syntax (typical):
-//   extractFromUNRST unrst=<ecl_unrst file> step=<report_number> keyword=<keyword to dump> grid_id=<grid number>
+//   extractFromRestart unrst=<ecl_unrst file> step=<report_number> keyword=<keyword to dump> grid_id=<grid number>
 int main(int argc, char* argv[]) {
     try {
-        Opm::parameter::ParameterGroup param(example::initParam(argc, argv));
+        Opm::parameter::ParameterGroup param(argc, argv,
+                /*verify_commandline_syntax=*/ true,
+                /*parameter_output=*/ false);
         const std::string unrst_file = param.get<std::string>("unrst");
         const int report_step = param.getDefault("step", int(0));
         const int grid_id = param.getDefault("grid_id", int(0));
