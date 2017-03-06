@@ -48,6 +48,8 @@ int main(int argc, char* argv[]) {
         if (restart_file.haveKeywordData(keyword, grid_id)) {
             const std::vector<double>& data = restart_file.keywordData<double>(keyword, grid_id);
 
+            std::cout.precision(20);
+
             // Write out to cout in a matlab-friendly fashion.
             std::cout << "kw_" << keyword << " = {" << std::endl
                     << "'unrst_file=" << unrst_file << "'," << std::endl
