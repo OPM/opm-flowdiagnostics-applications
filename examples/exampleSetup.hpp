@@ -124,7 +124,7 @@ namespace example {
                 const auto& ijk = completion.ijk;
                 const int cell_index = G.activeCell(ijk, grid_index);
                 if (cell_index >= 0) {
-                    inflow.emplace(cell_index, completion.reservoir_inflow_rate);
+                    inflow[cell_index] += completion.reservoir_inflow_rate;
                 }
             }
         }
