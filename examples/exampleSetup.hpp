@@ -31,6 +31,7 @@
 
 #include <opm/utility/ECLFluxCalc.hpp>
 #include <opm/utility/ECLGraph.hpp>
+#include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLWellSolution.hpp>
 
@@ -123,7 +124,7 @@ namespace example {
             Opm::ECLFluxCalc calc(G);
 
             auto getFlux = [&calc, &rstrt]
-                (const Opm::ECLGraph::PhaseIndex p)
+                (const Opm::ECLOutput::PhaseIndex p)
             {
                 return calc.flux(rstrt, p);
             };
@@ -132,7 +133,7 @@ namespace example {
         }
 
         auto getFlux = [&G, &rstrt]
-            (const Opm::ECLGraph::PhaseIndex p)
+            (const Opm::ECLOutput::PhaseIndex p)
         {
             return G.flux(rstrt, p);
         };

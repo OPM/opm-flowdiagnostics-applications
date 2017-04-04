@@ -21,6 +21,8 @@
 #define OPM_ECLFLUXCALC_HEADER_INCLUDED
 
 #include <opm/utility/ECLGraph.hpp>
+#include <opm/utility/ECLPhaseIndex.hpp>
+
 #include <vector>
 
 namespace Opm
@@ -36,8 +38,6 @@ namespace Opm
         /// \param[in] graph Connectivity data, as well as providing a means to read data from the restart file.
         explicit ECLFluxCalc(const ECLGraph& graph);
 
-        using PhaseIndex = ECLGraph::PhaseIndex;
-
         /// Retrive phase flux on all connections defined by \code
         /// graph.neighbours() \endcode.
         ///
@@ -47,8 +47,8 @@ namespace Opm
         ///         Empty if required data is missing.
         ///         Numerical values in SI units (rm^3/s).
         std::vector<double>
-        flux(const ECLRestartData& rstrt,
-             const PhaseIndex      phase) const;
+        flux(const ECLRestartData&       rstrt,
+             const ECLOutput::PhaseIndex phase) const;
 
     private:
         struct DynamicData

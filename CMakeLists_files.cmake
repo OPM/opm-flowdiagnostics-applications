@@ -48,6 +48,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
 list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLFluxCalc.hpp
         opm/utility/ECLGraph.hpp
+        opm/utility/ECLPhaseIndex.hpp
         opm/utility/ECLPropTable.hpp
         opm/utility/ECLResultData.hpp
         opm/utility/ECLUnitHandling.hpp
