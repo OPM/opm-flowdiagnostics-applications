@@ -1,5 +1,4 @@
 /*
-  Copyright 2017 SINTEF ICT, Applied Mathematics.
   Copyright 2017 Statoil ASA.
 
   This file is part of the Open Porous Media Project (OPM).
@@ -102,7 +101,7 @@ BOOST_AUTO_TEST_CASE (EmptyTable)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -119,7 +118,7 @@ BOOST_AUTO_TEST_CASE (SingleNode)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -139,7 +138,7 @@ BOOST_AUTO_TEST_CASE (NoResultColumns)
     t.numCols   = 1;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -163,7 +162,7 @@ BOOST_AUTO_TEST_CASE (EmptyTableLargeNodeAlloc)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -188,7 +187,7 @@ BOOST_AUTO_TEST_CASE (SingleNodeLargeNodeAlloc)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -216,7 +215,7 @@ BOOST_AUTO_TEST_CASE (NoResultColumnsLargeNodeAlloc)
     t.numCols   =  1;
     t.numTables =  1;
 
-    BOOST_CHECK_THROW(Opm::ECLPropTable1D(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
                       std::invalid_argument);
 }
 
@@ -246,14 +245,16 @@ BOOST_AUTO_TEST_CASE (AtNodes)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s         = std::vector<double>{ 0.8, 0.3, 0.3, 0.2 };
     const auto kr_expect = std::vector<double>{ 0.5, 0.1, 0.1, 0.0 };
     const auto pc_expect = std::vector<double>{ 0.0, 0.0, 0.0, 0.0 };
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    // Check interpolation
 
     const auto kr = swfunc.interpolate(InTable{0}, ResultColumn{0}, s);
     const auto pc = swfunc.interpolate(InTable{0}, ResultColumn{1}, s);
@@ -290,14 +291,14 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s         = std::vector<double>{ 0.80000001, 0.9, 0.199999999, 0.1 };
     const auto kr_expect = std::vector<double>{ 0.5,        0.5, 0.0,         0.0 };
     const auto pc_expect = std::vector<double>{ 0.0,        0.0, 0.0,         0.0 };
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     const auto kr = swfunc.interpolate(InTable{0}, ResultColumn{0}, s);
     const auto pc = swfunc.interpolate(InTable{0}, ResultColumn{1}, s);
@@ -324,7 +325,7 @@ BOOST_AUTO_TEST_CASE (Interpolation)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s = std::vector<double>{
         0.2000,
@@ -376,8 +377,8 @@ BOOST_AUTO_TEST_CASE (Interpolation)
 
     const auto pc_expect = std::vector<double>(s.size(), 0.0);
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     const auto kr = swfunc.interpolate(InTable{0}, ResultColumn{0}, s);
     const auto pc = swfunc.interpolate(InTable{0}, ResultColumn{1}, s);
@@ -417,7 +418,7 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s = std::vector<double>{
         0.0000,
@@ -485,8 +486,8 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
 
     const auto pc_expect = std::vector<double>(s.size(), 0.0);
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     const auto kr = swfunc.interpolate(InTable{0}, ResultColumn{0}, s);
     const auto pc = swfunc.interpolate(InTable{0}, ResultColumn{1}, s);
@@ -540,14 +541,14 @@ BOOST_AUTO_TEST_CASE (AtNodes)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s         = std::vector<double>{ 0.8, 0.3, 0.3, 0.2 };
     const auto kr_expect = std::vector<double>{ 0.5, 0.1, 0.1, 0.0 };
     const auto pc_expect = std::vector<double>{ 0.0, 0.0, 0.0, 0.0 };
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     for (auto ti = 0*t.numTables; ti < t.numTables; ++ti) {
         const auto kr = swfunc.interpolate(InTable{ti}, ResultColumn{0}, s);
@@ -605,14 +606,14 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s         = std::vector<double>{ 0.80000001, 0.9, 0.199999999, 0.1 };
     const auto kr_expect = std::vector<double>{ 0.5,        0.5, 0.0,         0.0 };
     const auto pc_expect = std::vector<double>{ 0.0,        0.0, 0.0,         0.0 };
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     for (auto ti = 0*t.numTables; ti < t.numTables; ++ti) {
         const auto kr = swfunc.interpolate(InTable{ti}, ResultColumn{0}, s);
@@ -661,7 +662,7 @@ BOOST_AUTO_TEST_CASE (Interpolation)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s = std::vector<double>{
         0.2000,
@@ -713,8 +714,8 @@ BOOST_AUTO_TEST_CASE (Interpolation)
 
     const auto pc_expect = std::vector<double>(s.size(), 0.0);
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     for (auto ti = 0*t.numTables; ti < t.numTables; ++ti) {
         const auto kr = swfunc.interpolate(InTable{ti}, ResultColumn{0}, s);
@@ -811,7 +812,7 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::ECLPropTable1D(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
 
     const auto s = std::vector<double>{
         0.0000,
@@ -879,8 +880,8 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
 
     const auto pc_expect = std::vector<double>(s.size(), 0.0);
 
-    using InTable      = Opm::ECLPropTable1D::InTable;
-    using ResultColumn = Opm::ECLPropTable1D::ResultColumn;
+    using InTable      = Opm::SatFuncInterpolant::InTable;
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
     for (auto ti = 0*t.numTables; ti < t.numTables; ++ti) {
         const auto kr = swfunc.interpolate(InTable{ti}, ResultColumn{0}, s);
@@ -889,6 +890,1528 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
         check_is_close(kr, kr_expect);
         check_is_close(pc, pc_expect);
     }
+}
+
+BOOST_AUTO_TEST_SUITE_END ()
+
+// =====================================================================
+// Single Table End-Points
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_SUITE (SingleTableEndPoints)
+
+BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+    };
+
+    t.numRows   = 3;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2 };
+    const auto scrit_expect = std::vector<double>{ 0.2 };
+    const auto smax_expect  = std::vector<double>{ 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    // 1e20 is a sentinel value that counts as row "ignored".
+    t.data = std::vector<double>{
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.3    , 0.1      , 0.0, //  7
+        0.8    , 0.5      , 0.0, //  8
+        1.0e20 , 1.0e+100 , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+    };
+
+    t.numRows   = 15;
+    t.numCols   =  3;
+    t.numTables =  1;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2 };
+    const auto scrit_expect = std::vector<double>{ 0.2 };
+    const auto smax_expect  = std::vector<double>{ 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2  };
+    const auto scrit_expect = std::vector<double>{ 0.21 };
+    const auto smax_expect  = std::vector<double>{ 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    // 1e20 is a sentinel value that counts as row "ignored".
+    t.data = std::vector<double>{
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.21   , 0.0      , 0.0, //  7
+        0.3    , 0.1      , 0.0, //  8
+        0.8    , 0.5      , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+        1.0e20 , 1.0e+100 , 0.0, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  1;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2 };
+    const auto scrit_expect = std::vector<double>{ 0.21 };
+    const auto smax_expect  = std::vector<double>{ 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 3;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2 };
+    const auto smax_expect       = std::vector<double>{ 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.3    ,  0.1     ,  0.5,      //  7
+        0.8    ,  0.5     ,  0.8,      //  8
+        1.0e20 ,  1.0e+100,  1.0e+100, //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+    };
+
+    t.numRows   = 15;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2 };
+    const auto smax_expect       = std::vector<double>{ 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.1,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2  };
+    const auto smax_expect       = std::vector<double>{ 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.0     ,  0.1,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2  };
+    const auto smax_expect       = std::vector<double>{ 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.1 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.21 };
+    const auto smax_expect       = std::vector<double>{ 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.1     ,  0.0,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.21 };
+    const auto smax_expect       = std::vector<double>{ 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2  , 0.0 , 0.0,
+        0.205, 0.0 , 0.0,
+        0.21 , 0.0 , 0.1,
+        0.25 , 0.1 , 0.2,
+        0.3  , 0.1 , 0.5,
+        0.8  , 0.5 , 0.8,
+    };
+
+    t.numRows   = 6;
+    t.numCols   = 3;
+    t.numTables = 1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2   };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.205 };
+    const auto smax_expect       = std::vector<double>{ 0.8   };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.2    ,  0.0     ,  0.0     , //  5
+        0.205  ,  0.0     ,  0.0     , //  6
+        0.21   ,  0.0     ,  0.1     , //  7
+        0.25   ,  0.1     ,  0.2     , //  8
+        0.3    ,  0.1     ,  0.5     , //  9
+        0.8    ,  0.5     ,  0.8     , // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  1;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2   };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.205 };
+    const auto smax_expect       = std::vector<double>{ 0.8   };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_SUITE_END ()
+
+// =====================================================================
+// Table End-Points in Multiple Tables
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_SUITE (TableEndPointsMultiTable)
+
+BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+    };
+
+    t.numRows   = 3;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto scrit_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto smax_expect  = std::vector<double>{ 0.8, 0.8, 0.8, 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    // 1e20 is a sentinel value that counts as row "ignored".
+    t.data = std::vector<double>{
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.3    , 0.1      , 0.0, //  7
+        0.8    , 0.5      , 0.0, //  8
+        1.0e20 , 1.0e+100 , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.3    , 0.1      , 0.0, //  7
+        0.8    , 0.5      , 0.0, //  8
+        1.0e20 , 1.0e+100 , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.3    , 0.1      , 0.0, //  7
+        0.8    , 0.5      , 0.0, //  8
+        1.0e20 , 1.0e+100 , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.3    , 0.1      , 0.0, //  7
+        0.8    , 0.5      , 0.0, //  8
+        1.0e20 , 1.0e+100 , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+    };
+
+    t.numRows   = 15;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto scrit_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto smax_expect  = std::vector<double>{ 0.8, 0.8, 0.8, 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+
+        // s, kr  , pc
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.0,
+        0.3 , 0.1 , 0.0,
+        0.8 , 0.5 , 0.0,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
+    const auto scrit_expect = std::vector<double>{ 0.21, 0.21, 0.21, 0.21 };
+    const auto smax_expect  = std::vector<double>{ 0.8 , 0.8 , 0.8 , 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    // 1e20 is a sentinel value that counts as row "ignored".
+    t.data = std::vector<double>{
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        -1.0e20, -1.0e+100, 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.21   , 0.0      , 0.0, //  7
+        0.3    , 0.1      , 0.0, //  8
+        0.7    , 0.5      , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+        1.0e20 , 1.0e+100 , 0.0, // 16
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        0.1    , 0.0      , 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.21   , 0.0      , 0.0, //  7
+        0.3    , 0.1      , 0.0, //  8
+        0.8    , 0.5      , 0.0, //  9
+        1.0e20 , 1.0e+100 , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+        1.0e20 , 1.0e+100 , 0.0, // 16
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        -1.0e20, -1.0e+100, 0.0, //  4
+        0.1    , 0.0      , 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.21   , 0.0      , 0.0, //  7
+        0.3    , 0.1      , 0.0, //  8
+        0.5    , 0.35     , 0.0, //  9
+        0.9    , 0.5      , 0.0, // 10
+        1.0e20 , 1.0e+100 , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+        1.0e20 , 1.0e+100 , 0.0, // 16
+
+        // s   , kr       , pc
+        -1.0e20, -1.0e+100, 0.0, //  1
+        -1.0e20, -1.0e+100, 0.0, //  2
+        -1.0e20, -1.0e+100, 0.0, //  3
+        0.0    , 0.0      , 0.0, //  4
+        0.1    , 0.0      , 0.0, //  5
+        0.2    , 0.0      , 0.0, //  6
+        0.21   , 0.0      , 0.0, //  7
+        0.3    , 0.1      , 0.0, //  8
+        0.5    , 0.35     , 0.0, //  9
+        0.8    , 0.5      , 0.0, // 10
+        0.95   , 0.5      , 0.0, // 11
+        1.0e20 , 1.0e+100 , 0.0, // 12
+        1.0e20 , 1.0e+100 , 0.0, // 13
+        1.0e20 , 1.0e+100 , 0.0, // 14
+        1.0e20 , 1.0e+100 , 0.0, // 15
+        1.0e20 , 1.0e+100 , 0.0, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect = std::vector<double>{ 0.2 , 0.1 , 0.1 , 0.0  };
+    const auto scrit_expect = std::vector<double>{ 0.21, 0.21, 0.21, 0.21 };
+    const auto smax_expect  = std::vector<double>{ 0.7 , 0.8 , 0.9 , 0.95 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn = swfunc.connateSat();
+    const auto scrit = swfunc.criticalSat(ResultColumn{0});
+    const auto smax  = swfunc.maximumSat();
+
+    check_is_close(sconn, sconn_expect);
+    check_is_close(scrit, scrit_expect);
+    check_is_close(smax , smax_expect );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 3;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto smax_expect       = std::vector<double>{ 0.8, 0.8, 0.8, 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.3    ,  0.1     ,  0.5,      //  7
+        0.8    ,  0.5     ,  0.8,      //  8
+        1.0e20 ,  1.0e+100,  1.0e+100, //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.1    ,  0.0     ,  0.0,      //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.3    ,  0.1     ,  0.5,      //  7
+        0.8    ,  0.5     ,  0.8,      //  8
+        1.0e20 ,  1.0e+100,  1.0e+100, //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        0.0    ,  0.0     ,  0.0,      //  4
+        0.15   ,  0.0     ,  0.0,      //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.3    ,  0.1     ,  0.5,      //  7
+        0.7    ,  0.35    ,  0.8,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.1    ,  0.0     ,  0.0,      //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.3    ,  0.1     ,  0.5,      //  7
+        0.8    ,  0.5     ,  0.8,      //  8
+        0.9    ,  0.85    ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+    };
+
+    t.numRows   = 15;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2, 0.1, 0.0, 0.1 };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
+    const auto smax_expect       = std::vector<double>{ 0.8, 0.8, 0.8, 0.9 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.1,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.1,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.1,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.0 , 0.1,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21, 0.21, 0.21, 0.21 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
+    const auto smax_expect       = std::vector<double>{ 0.8 , 0.8 , 0.8 , 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.0     ,  0.1,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.0     ,  0.1,      //  7
+        0.25   ,  0.0     ,  0.5,      //  8
+        0.3    ,  0.1     ,  0.5,      //  9
+        0.8    ,  0.5     ,  0.8,      // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.1    ,  0.0     ,  0.0,      //  5
+        0.2    ,  0.0     ,  0.00001,  //  6
+        0.21   ,  0.0     ,  0.1,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        0.9    ,  0.75    ,  0.9,      // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.0     ,  0.1,      //  7
+        0.3    ,  0.0     ,  0.25,     //  8
+        0.4    ,  0.00001 ,  0.30,     //  9
+        0.5    ,  0.1     ,  0.5,      // 10
+        0.8    ,  0.5     ,  0.8,      // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.1 , 0.2 };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21, 0.25, 0.21, 0.3 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.2 , 0.2 , 0.1 , 0.2 };
+    const auto smax_expect       = std::vector<double>{ 0.8 , 0.8 , 0.9 , 0.8 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.1 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.1 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.1 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2 , 0.0 , 0.0,
+        0.21, 0.1 , 0.0,
+        0.3 , 0.1 , 0.5,
+        0.8 , 0.5 , 0.8,
+    };
+
+    t.numRows   = 4;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.21, 0.21, 0.21, 0.21 };
+    const auto smax_expect       = std::vector<double>{ 0.8 , 0.8 , 0.8 , 0.8  };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.1     ,  0.0,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        1.0e20 ,  1.0e+100,  1.0e+100, // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.1     ,  0.0,      //  7
+        0.25   ,  0.15    ,  0.0,      //  8
+        0.3    ,  0.1     ,  0.5,      //  9
+        0.8    ,  0.5     ,  0.8,      // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.0    ,  0.0     ,  0.0,      //  5
+        0.1    ,  0.000001,  0.0,      //  6
+        0.21   ,  0.1     ,  0.0,      //  7
+        0.3    ,  0.15    ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        0.82   ,  0.6     ,  0.8,      // 10
+        0.9    ,  0.8     ,  0.89,     // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        -1.0e20, -1.0e+100, -1.0e+100, //  5
+        0.2    ,  0.0     ,  0.0,      //  6
+        0.21   ,  0.1     ,  0.0,      //  7
+        0.3    ,  0.1     ,  0.5,      //  8
+        0.8    ,  0.5     ,  0.8,      //  9
+        0.80001,  0.500001,  0.8,      // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.0 , 0.2     };
+    const auto scrit_krow_expect = std::vector<double>{ 0.2 , 0.2 , 0.0 , 0.2     };
+    const auto scrit_krog_expect = std::vector<double>{ 0.21, 0.25, 0.21, 0.21    };
+    const auto smax_expect       = std::vector<double>{ 0.8 , 0.8 , 0.9 , 0.80001 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s, krow, krog
+        0.2  , 0.0 , 0.0,
+        0.205, 0.0 , 0.0,
+        0.21 , 0.0 , 0.1,
+        0.25 , 0.1 , 0.2,
+        0.3  , 0.1 , 0.5,
+        0.8  , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2  , 0.0 , 0.0,
+        0.206, 0.0 , 0.0,
+        0.211, 0.0 , 0.1,
+        0.25 , 0.1 , 0.2,
+        0.3  , 0.1 , 0.5,
+        0.8  , 0.5 , 0.8,
+
+        // s, krow, krog
+        0.2  , 0.0 , 0.0,
+        0.207, 0.0 , 0.0,
+        0.212, 0.0 , 0.1,
+        0.25 , 0.1 , 0.2,
+        0.3  , 0.1 , 0.5,
+        0.85 , 0.6 , 0.8,
+
+        // s, krow, krog
+        0.2  , 0.0 , 0.0,
+        0.209, 0.0 , 0.0,
+        0.225, 0.0 , 0.1,
+        0.25 , 0.1 , 0.2,
+        0.3  , 0.1 , 0.5,
+        0.9  , 0.8 , 0.9,
+    };
+
+    t.numRows   = 6;
+    t.numCols   = 3;
+    t.numTables = 4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  , 0.2  , 0.2  , 0.2   };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21 , 0.211, 0.212, 0.225 };
+    const auto scrit_krog_expect = std::vector<double>{ 0.205, 0.206, 0.207, 0.209 };
+    const auto smax_expect       = std::vector<double>{ 0.8  , 0.8  , 0.85 , 0.9   };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
+}
+
+BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
+{
+    auto t = Opm::ECLPropTableRawData{};
+
+    t.data = std::vector<double>{
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.2    ,  0.0     ,  0.0     , //  5
+        0.205  ,  0.0     ,  0.0     , //  6
+        0.21   ,  0.0     ,  0.1     , //  7
+        0.25   ,  0.1     ,  0.2     , //  8
+        0.3    ,  0.1     ,  0.5     , //  9
+        0.8    ,  0.5     ,  0.8     , // 10
+        1.0e20 ,  1.0e+100,  1.0e+100, // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        0.1    ,  0.0     ,  0.0     , //  4
+        0.2    ,  0.0     ,  0.0     , //  5
+        0.205  ,  0.0     ,  0.0     , //  6
+        0.21   ,  0.0     ,  0.1     , //  7
+        0.25   ,  0.1     ,  0.2     , //  8
+        0.3    ,  0.15    ,  0.5     , //  9
+        0.5    ,  0.25    ,  0.6     , // 10
+        0.8    ,  0.5     ,  0.8     , // 11
+        0.9    ,  0.75    ,  0.9     , // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.2    ,  0.0     ,  0.0     , //  5
+        0.205  ,  0.000001,  0.000001, //  6
+        0.21   ,  0.000002,  0.1     , //  7
+        0.25   ,  0.1     ,  0.2     , //  8
+        0.3    ,  0.1     ,  0.5     , //  9
+        0.8    ,  0.5     ,  0.8     , // 10
+        0.825  ,  0.75    ,  0.825   , // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+
+        // s   ,  krow    ,  krog
+        -1.0e20, -1.0e+100, -1.0e+100, //  1
+        -1.0e20, -1.0e+100, -1.0e+100, //  2
+        -1.0e20, -1.0e+100, -1.0e+100, //  3
+        -1.0e20, -1.0e+100, -1.0e+100, //  4
+        0.2    ,  0.0     ,  0.0     , //  5
+        0.205  ,  0.0     ,  0.0     , //  6
+        0.21   ,  0.0     ,  0.0     , //  7
+        0.25   ,  0.0     ,  0.0     , //  8
+        0.3    ,  0.0     ,  0.000001, //  9
+        0.8    ,  0.0     ,  0.8     , // 10
+        0.99   ,  0.000001,  0.99    , // 11
+        1.0e20 ,  1.0e+100,  1.0e+100, // 12
+        1.0e20 ,  1.0e+100,  1.0e+100, // 13
+        1.0e20 ,  1.0e+100,  1.0e+100, // 14
+        1.0e20 ,  1.0e+100,  1.0e+100, // 15
+        1.0e20 ,  1.0e+100,  1.0e+100, // 16
+    };
+
+    t.numRows   = 16;
+    t.numCols   =  3;
+    t.numTables =  4;
+
+    // Table end-points
+    const auto sconn_expect      = std::vector<double>{ 0.2  , 0.1  , 0.2  , 0.2  };
+    const auto scrit_krow_expect = std::vector<double>{ 0.21 , 0.21 , 0.2  , 0.8  };
+    const auto scrit_krog_expect = std::vector<double>{ 0.205, 0.205, 0.2  , 0.25 };
+    const auto smax_expect       = std::vector<double>{ 0.8  , 0.9  , 0.825, 0.99 };
+
+    // Note: Need to convert input table to column major (Fortran) order
+    // because that is the format in which PropTable1D expects the tabular
+    // data.
+    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+
+    using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
+
+    const auto sconn      = swfunc.connateSat();
+    const auto scrit_krow = swfunc.criticalSat(ResultColumn{0});
+    const auto scrit_krog = swfunc.criticalSat(ResultColumn{1});
+    const auto smax       = swfunc.maximumSat();
+
+    check_is_close(sconn     , sconn_expect     );
+    check_is_close(scrit_krow, scrit_krow_expect);
+    check_is_close(scrit_krog, scrit_krog_expect);
+    check_is_close(smax      , smax_expect      );
 }
 
 BOOST_AUTO_TEST_SUITE_END ()

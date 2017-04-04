@@ -1,5 +1,4 @@
 /*
-  Copyright 2017 SINTEF ICT, Applied Mathematics.
   Copyright 2017 Statoil ASA.
 
   This file is part of the Open Porous Media Project (OPM).
@@ -61,13 +60,13 @@ namespace Opm {
 
     /// Collection of 1D interpolants from tabulated functions (e.g., the
     /// saturation functions).
-    class ECLPropTable1D
+    class SatFuncInterpolant
     {
     public:
         /// Constructor.
         ///
         /// \param[in] raw Raw table data for this collection.
-        explicit ECLPropTable1D(const ECLPropTableRawData& raw);
+        explicit SatFuncInterpolant(const ECLPropTableRawData& raw);
 
         /// Wrapper type to disambiguate API usage.  Represents a table ID.
         struct InTable {
@@ -96,6 +95,16 @@ namespace Opm {
                     const ResultColumn&        c,
                     const std::vector<double>& x) const;
 
+        /// Retrieve connate saturation from all tables.
+        std::vector<double> connateSat() const;
+
+        /// Retrieve critical saturation for particular result column in all
+        /// tables.
+        std::vector<double> criticalSat(const ResultColumn& c) const;
+
+        /// Retrieve maximum saturation in all tables.
+        std::vector<double> maximumSat() const;
+
     private:
         /// Single tabulated 1D interpolant.
         class SingleTable
@@ -105,12 +114,18 @@ namespace Opm {
 
             /// Constructor.
             ///
-            /// \param[in] tBegin Beginning (initial element) of a single
-            ///    table.
+            /// \param[in] xBegin Beginning (initial element) of linar range
+            ///    of independent variable values.
             ///
-            /// \param[in] nRows Number of allocated table rows.
+            /// \param[in] xEnd One past the end of linear range of
+            ///    independent variable values.
             ///
-            /// \param[in] nCols Number of table columns.
+            /// \param[in,out] colIt Dependent/column range iterators.  On
+            ///    input, point to the beginnings of ranges of results
+            ///    pertinent to a single table.  On output, each iterator is
+            ///    advanced across all rows of the SingleTable (including
+            ///    sentinel/invalid nodes) which makes the pointers valid
+            ///    for the next table if relevant (and called in a loop).
             SingleTable(ElmIt               xBegin,
                         ElmIt               xEnd,
                         std::vector<ElmIt>& colIt);
@@ -129,6 +144,17 @@ namespace Opm {
             interpolate(const ECLPropTableRawData::SizeType nCols,
                         const ResultColumn&                 c,
                         const std::vector<double>&          x) const;
+
+            /// Retrieve connate saturation in table.
+            double connateSat() const;
+
+            /// Retrieve critical saturation for particular result column in
+            /// table.
+            double criticalSat(const ECLPropTableRawData::SizeType nCols,
+                               const ResultColumn&                 c) const;
+
+            /// Retrieve maximum saturation in table.
+            double maximumSat() const;
 
         private:
             /// Independent variable.
