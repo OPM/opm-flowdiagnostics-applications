@@ -493,6 +493,7 @@ namespace {
 
     std::array<AggregateErrors, 2>
     sampleDifferences(const ::Opm::ECLGraph&                  graph,
+                      const ::Opm::ECLRestartData&            rstrt,
                       const ::Opm::ParameterGroup& param,
                       const std::string&                      quant,
                       const std::vector<int>&                 steps)
@@ -510,7 +511,7 @@ namespace {
         auto E = std::array<AggregateErrors, 2>{};
 
         for (const auto& step : steps) {
-            if (! graph.selectReportStep(step)) {
+            if (! rstrt.selectReportStep(step)) {
                 continue;
             }
 
@@ -518,7 +519,7 @@ namespace {
 
             {
                 const auto raw = Calculated {
-                    graph.rawLinearisedCellData<double>(ECLquant)
+                    graph.rawLinearisedCellData<double>(rstrt, ECLquant)
                 };
 
                 computeErrors(Reference{ ref.raw }, raw, E[0]);
@@ -526,7 +527,7 @@ namespace {
 
             {
                 const auto SI = Calculated {
-                    graph.linearisedCellData(ECLquant, unit)
+                    graph.linearisedCellData(rstrt, ECLquant, unit)
                 };
 
                 computeErrors(Reference{ ref.SI }, SI, E[1]);
@@ -561,12 +562,14 @@ try {
     const auto pth = example::FilePaths(prm);
     const auto tol = testTolerances(prm);
 
+    const auto rstrt = ::Opm::ECLRestartData(pth.restart);
     const auto steps = availableReportSteps(pth);
     const auto graph = example::initGraph(pth);
 
     auto all_ok = true;
     for (const auto& quant : testQuantities(prm)) {
-        const auto E = sampleDifferences(graph, prm, quant, steps);
+        const auto E =
+            sampleDifferences(graph, rstrt, prm, quant, steps);
 
         const auto ok =
             everythingFine(E[0], tol) && everythingFine(E[1], tol);
