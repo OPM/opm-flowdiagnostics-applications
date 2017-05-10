@@ -25,6 +25,7 @@
 #include <opm/core/utility/parameters/ParameterGroup.hpp>
 #include <opm/utility/ECLResultData.hpp>
 
+#include <iostream>
 
 // Syntax (typical):
 //   extractFromRestart unrst=<ecl_unrst file> step=<report_number> keyword=<keyword to dump> grid_id=<grid number>
@@ -35,10 +36,10 @@ int main(int argc, char* argv[]) {
                 /*parameter_output=*/ false);
         const std::string unrst_file = param.get<std::string>("unrst");
         const int report_step = param.getDefault("step", int(0));
-        const int grid_id = param.getDefault("grid_id", int(0));
+        const std::string grid_id = param.getDefault("grid_id", std::string(""));
         const std::string keyword = param.get<std::string>("keyword");
 
-        Opm::ECLResultData restart_file(unrst_file);
+        Opm::ECLRestartData restart_file(unrst_file);
 
         if (!restart_file.selectReportStep(report_step)) {
             std::cerr << "Could not find report step " << report_step << "." << std::endl;
