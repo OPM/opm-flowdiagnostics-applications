@@ -377,7 +377,7 @@ namespace {
     }
 
     ErrorTolerance
-    testTolerances(const ::Opm::parameter::ParameterGroup& param)
+    testTolerances(const ::Opm::ParameterGroup& param)
     {
         const auto atol = param.getDefault("atol", 1.0e-8);
         const auto rtol = param.getDefault("rtol", 5.0e-12);
@@ -386,7 +386,7 @@ namespace {
     }
 
     std::vector<std::string>
-    testQuantities(const ::Opm::parameter::ParameterGroup& param)
+    testQuantities(const ::Opm::ParameterGroup& param)
     {
         return StringUtils::VectorValue::
             get<std::string>(param.get<std::string>("quant"));
@@ -411,7 +411,7 @@ namespace {
     }
 
     ReferenceSolution
-    loadReference(const ::Opm::parameter::ParameterGroup& param,
+    loadReference(const ::Opm::ParameterGroup& param,
                   const std::string&                      quant,
                   const int                               step,
                   const int                               nDigits)
@@ -493,7 +493,7 @@ namespace {
 
     std::array<AggregateErrors, 2>
     sampleDifferences(const ::Opm::ECLGraph&                  graph,
-                      const ::Opm::parameter::ParameterGroup& param,
+                      const ::Opm::ParameterGroup& param,
                       const std::string&                      quant,
                       const std::vector<int>&                 steps)
     {
