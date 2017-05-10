@@ -142,7 +142,7 @@ namespace example {
 
     struct FilePaths
     {
-        FilePaths(const Opm::parameter::ParameterGroup& param)
+        FilePaths(const Opm::ParameterGroup& param)
         {
             const string casename = param.getDefault<string>("case", "DEFAULT_CASE_NAME");
             grid = param.has("grid") ? param.get<string>("grid")
@@ -164,13 +164,13 @@ namespace example {
 
 
 
-    inline Opm::parameter::ParameterGroup
+    inline Opm::ParameterGroup
     initParam(int argc, char** argv)
     {
         // Obtain parameters from command line (possibly specifying a parameter file).
         const bool verify_commandline_syntax = true;
         const bool parameter_output = false;
-        Opm::parameter::ParameterGroup param(argc, argv, verify_commandline_syntax, parameter_output);
+        Opm::ParameterGroup param(argc, argv, verify_commandline_syntax, parameter_output);
         return param;
     }
 
@@ -239,7 +239,7 @@ namespace example {
             }
         }
 
-        Opm::parameter::ParameterGroup param;
+        Opm::ParameterGroup param;
         FilePaths file_paths;
         Opm::ECLGraph graph;
         std::vector<Opm::ECLWellSolution::WellData> well_fluxes;

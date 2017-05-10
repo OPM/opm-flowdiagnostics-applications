@@ -30,7 +30,7 @@
 //   extractFromRestart unrst=<ecl_unrst file> step=<report_number> keyword=<keyword to dump> grid_id=<grid number>
 int main(int argc, char* argv[]) {
     try {
-        Opm::parameter::ParameterGroup param(argc, argv,
+        Opm::ParameterGroup param(argc, argv,
                 /*verify_commandline_syntax=*/ true,
                 /*parameter_output=*/ false);
         const std::string unrst_file = param.get<std::string>("unrst");
