@@ -1206,7 +1206,7 @@ private:
 
     /// Comparator (std::set<> and std::map<>) for KWKeys.
     struct CompareKWKey {
-        bool operator()(const KWKey& k1, const KWKey& k2)
+        bool operator()(const KWKey& k1, const KWKey& k2) const
         {
             return std::tie(k1.vector, k1.gridName)
                 <  std::tie(k2.vector, k2.gridName);
