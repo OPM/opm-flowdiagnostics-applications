@@ -22,11 +22,15 @@
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
+#include <utility>
+
 namespace Opm
 {
 
-    ECLFluxCalc::ECLFluxCalc(const ECLGraph& graph)
+    ECLFluxCalc::ECLFluxCalc(const ECLGraph&     graph,
+                             ECLSaturationFunc&& satfunc)
         : graph_(graph)
+        , satfunc_(std::move(satfunc))
         , neighbours_(graph.neighbours())
         , transmissibility_(graph.transmissibility())
     {
@@ -38,13 +42,16 @@ namespace Opm
 
     std::vector<double>
     ECLFluxCalc::flux(const ECLRestartData& rstrt,
-                      const ECLOutput::PhaseIndex /* phase */) const
+                      const ECLOutput::PhaseIndex phase) const
     {
         // Obtain dynamic data.
         DynamicData dyn_data;
         dyn_data.pressure = graph_
             .linearisedCellData(rstrt, "PRESSURE",
                                 &ECLUnits::UnitSystem::pressure);
+
+        dyn_data.relperm = this->satfunc_
+            .relperm(this->graph_, rstrt, phase);
 
         // Compute fluxes per connection.
         const int num_conn = transmissibility_.size();
@@ -66,8 +73,9 @@ namespace Opm
         const int c2 = neighbours_[2*connection + 1];
         const double transmissibility = transmissibility_[connection];
         const double viscosity = 1.0 * prefix::centi * unit::Poise;
-        const double mobility = 1.0 / viscosity;
         const auto& pressure = dyn_data.pressure;
+        const double avg_kr = (dyn_data.relperm[c1] + dyn_data.relperm[c2]) / 2.0;
+        const double mobility = avg_kr / viscosity;
         return mobility * transmissibility * (pressure[c1] - pressure[c2]);
     }
 
