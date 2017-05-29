@@ -276,6 +276,8 @@ namespace Relperm {
                 return this->kroImpl(regID, so_g, sg, so_w, sw);
             }
 
+            virtual std::unique_ptr<KrFunction> clone() = 0;
+
         protected:
             std::vector<double>
             krog(const std::size_t          regID,
@@ -356,6 +358,11 @@ namespace Relperm {
                 , subsys_   (subsys)
             {}
 
+            virtual std::unique_ptr<KrFunction> clone()
+            {
+                return std::unique_ptr<KrFunction>(new TwoPhase(*this));
+            }
+
         private:
             SubSys subsys_;
 
@@ -387,6 +394,11 @@ namespace Relperm {
                 : KrFunction(tabdims, false, tab)
                 , swco_     (std::move(swco))
             {}
+
+            virtual std::unique_ptr<KrFunction> clone()
+            {
+                return std::unique_ptr<KrFunction>(new ECLStdThreePhase(*this));
+            }
 
         private:
             std::vector<double> swco_;
@@ -1012,26 +1024,12 @@ Impl::initEPS(const EPSEvaluator::ActPh& active,
 
 // #####################################################################
 
-// Copy Constructor.  Pay attention here, especially for the oil relperm
-// case.  Prefer move constructor if possible.
 Opm::ECLSaturationFunc::Impl::Impl(const Impl& rhs)
     : rmap_(rhs.rmap_)
 {
     if (rhs.oil_) {
-        // Now tread carefully.  Here be dragons.
-        using TwoP   = Relperm::Oil::TwoPhase;
-        using ThreeP = Relperm::Oil::ECLStdThreePhase;
-
-        const auto* kro = rhs.oil_.get();
-
-        if (auto* impl = dynamic_cast<const TwoP*>(kro)) {
-            // Two-phase run
-            this->oil_.reset(new TwoP(*impl));
-        }
-        else if (auto* impl = dynamic_cast<const ThreeP*>(kro)) {
-            // Three-phase run
-            this->oil_.reset(new ThreeP(*impl));
-        }
+        // Polymorphic object must use clone().
+        this->oil_ = rhs.oil_->clone();
     }
 
     if (rhs.gas_) {
