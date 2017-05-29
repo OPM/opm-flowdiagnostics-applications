@@ -276,7 +276,7 @@ namespace Relperm {
                 return this->kroImpl(regID, so_g, sg, so_w, sw);
             }
 
-            virtual std::unique_ptr<KrFunction> clone() = 0;
+            virtual std::unique_ptr<KrFunction> clone() const = 0;
 
         protected:
             std::vector<double>
@@ -358,7 +358,7 @@ namespace Relperm {
                 , subsys_   (subsys)
             {}
 
-            virtual std::unique_ptr<KrFunction> clone()
+            virtual std::unique_ptr<KrFunction> clone() const override
             {
                 return std::unique_ptr<KrFunction>(new TwoPhase(*this));
             }
@@ -395,7 +395,7 @@ namespace Relperm {
                 , swco_     (std::move(swco))
             {}
 
-            virtual std::unique_ptr<KrFunction> clone()
+            virtual std::unique_ptr<KrFunction> clone() const override
             {
                 return std::unique_ptr<KrFunction>(new ECLStdThreePhase(*this));
             }
