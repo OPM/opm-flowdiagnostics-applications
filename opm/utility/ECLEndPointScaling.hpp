@@ -313,11 +313,11 @@ namespace Opm { namespace SatFunc {
             ///   opt.use3PtScaling = false;
             ///   opt.curve         = FunctionCategory::Relperm;
             ///   opt.subSys        = SubSystem::OilGas;
-            ///   opt.thisPh        = ECLOutput::PhaseIndex::Oil;
+            ///   opt.thisPh        = ECLPhaseIndex::Oil;
             ///
             ///   auto eps = CreateEPS::fromECLOutput(G, init, opt);
             /// \endcode
-            ::Opm::ECLOutput::PhaseIndex thisPh;
+            ::Opm::ECLPhaseIndex thisPh;
         };
 
         /// Collection of raw saturation table end points.

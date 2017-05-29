@@ -20,13 +20,13 @@
 #ifndef OPM_ECLPHASEINDEX_HEADER_INCLUDED
 #define OPM_ECLPHASEINDEX_HEADER_INCLUDED
 
-namespace Opm { namespace ECLOutput {
+namespace Opm {
 
     /// Enum for indicating the phase--or set of phases--on which to apply a
     /// phase-dependent operation (e.g., extracting flux data from a result
     /// set or computing relative permeabilities from tabulated functions).
-    enum class PhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
+    enum class ECLPhaseIndex { Aqua = 0, Liquid = 1, Vapour = 2 };
 
-}} // namespace Opm::ECLOutput
+} // namespace Opm
 
 #endif // OPM_ECLPHASEINDEX_HEADER_INCLUDED

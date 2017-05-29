@@ -42,7 +42,7 @@ namespace Opm
 
     std::vector<double>
     ECLFluxCalc::flux(const ECLRestartData& rstrt,
-                      const ECLOutput::PhaseIndex phase) const
+                      const ECLPhaseIndex         phase) const
     {
         // Obtain dynamic data.
         DynamicData dyn_data;

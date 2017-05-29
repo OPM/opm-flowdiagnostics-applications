@@ -43,14 +43,17 @@ namespace Opm
         /// Retrive phase flux on all connections defined by \code
         /// graph.neighbours() \endcode.
         ///
+        /// \param[in] rstrt ECL Restart data set from which to extract
+        ///            relevant data per cell.
+        ///
         /// \param[in] phase Canonical phase for which to retrive flux.
         ///
         /// \return Flux values corresponding to selected phase.
         ///         Empty if required data is missing.
         ///         Numerical values in SI units (rm^3/s).
         std::vector<double>
-        flux(const ECLRestartData&       rstrt,
-             const ECLOutput::PhaseIndex phase) const;
+        flux(const ECLRestartData& rstrt,
+             const ECLPhaseIndex   phase) const;
 
     private:
         struct DynamicData

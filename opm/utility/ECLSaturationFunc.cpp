@@ -571,7 +571,7 @@ public:
     std::vector<double>
     relperm(const ECLGraph&             G,
             const ECLRestartData&       rstrt,
-            const ECLOutput::PhaseIndex p) const;
+            const ECLPhaseIndex         p) const;
 
 private:
     class EPSEvaluator
@@ -644,7 +644,7 @@ private:
     private:
         using Create = ::Opm::SatFunc::CreateEPS;
         using SSys   = ::Opm::SatFunc::CreateEPS::SubSystem;
-        using PhIdx  = ::Opm::ECLOutput::PhaseIndex;
+        using PhIdx  = ::Opm::ECLPhaseIndex;
 
         using EPSInterface = ::Opm::SatFunc::EPSEvalInterface;
         using EPSEndPts    = ::Opm::SatFunc::EPSEvalInterface::TableEndPoints;
@@ -1045,18 +1045,18 @@ Opm::ECLSaturationFunc::Impl::Impl(const Impl& rhs)
 
 std::vector<double>
 Opm::ECLSaturationFunc::Impl::
-relperm(const ECLGraph&             G,
-        const ECLRestartData&       rstrt,
-        const ECLOutput::PhaseIndex p) const
+relperm(const ECLGraph&       G,
+        const ECLRestartData& rstrt,
+        const ECLPhaseIndex   p) const
 {
     switch (p) {
-    case ECLOutput::PhaseIndex::Aqua:
+    case ECLPhaseIndex::Aqua:
         return this->krw(G, rstrt);
 
-    case ECLOutput::PhaseIndex::Liquid:
+    case ECLPhaseIndex::Liquid:
         return this->kro(G, rstrt);
 
-    case ECLOutput::PhaseIndex::Vapour:
+    case ECLPhaseIndex::Vapour:
         return this->krg(G, rstrt);
     }
 
@@ -1264,9 +1264,9 @@ Opm::ECLSaturationFunc::operator=(const ECLSaturationFunc& rhs)
 
 std::vector<double>
 Opm::ECLSaturationFunc::
-relperm(const ECLGraph&             G,
-        const ECLRestartData&       rstrt,
-        const ECLOutput::PhaseIndex p) const
+relperm(const ECLGraph&       G,
+        const ECLRestartData& rstrt,
+        const ECLPhaseIndex   p) const
 {
     return this->pImpl_->relperm(G, rstrt, p);
 }

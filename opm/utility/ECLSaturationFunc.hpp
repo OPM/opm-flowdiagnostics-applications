@@ -122,9 +122,9 @@ namespace Opm {
         ///    p for all active cells in model \p G.  Empty if phase \p p is
         ///    not actually active in the current result set.
         std::vector<double>
-        relperm(const ECLGraph&             G,
-                const ECLRestartData&       rstrt,
-                const ECLOutput::PhaseIndex p) const;
+        relperm(const ECLGraph&       G,
+                const ECLRestartData& rstrt,
+                const ECLPhaseIndex   p) const;
 
     private:
         /// Implementation backend.

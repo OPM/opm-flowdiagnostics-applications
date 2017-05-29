@@ -123,7 +123,7 @@ namespace Opm {
         ///
         /// Mostly useful to determine the set of \c PhaseIndex values for
         /// which flux() will return non-zero values if data available.
-        const std::vector<ECLOutput::PhaseIndex>& activePhases() const;
+        const std::vector<ECLPhaseIndex>& activePhases() const;
 
         /// Retrieve the simulation scenario's set of active grids.
         ///
@@ -164,8 +164,8 @@ namespace Opm {
         ///    output to the restart file).  Numerical values in SI units
         ///    (rm^3/s).
         std::vector<double>
-        flux(const ECLRestartData&       rstrt,
-             const ECLOutput::PhaseIndex phase) const;
+        flux(const ECLRestartData& rstrt,
+             const ECLPhaseIndex   phase) const;
 
         /// Retrieve result set vector from current view (e.g., particular
         /// report step) linearised on active cells.

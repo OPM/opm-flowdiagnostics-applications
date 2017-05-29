@@ -490,7 +490,7 @@ scalingFunction(const ::Opm::ECLGraph&                       G,
 {
     using FCat  = ::Opm::SatFunc::CreateEPS::FunctionCategory;
     using SSys  = ::Opm::SatFunc::CreateEPS::SubSystem;
-    using PhIdx = ::Opm::ECLOutput::PhaseIndex;
+    using PhIdx = ::Opm::ECLPhaseIndex;
 
     assert (((! opt.use3PtScaling) || (opt.curve == FCat::CapPress))
             && "Internal Error Selecting EPS Family");
@@ -555,7 +555,7 @@ Create::TwoPoint::unscaledEndPoints(const RTEP& ep, const EPSOpt& opt)
 {
     using FCat  = ::Opm::SatFunc::CreateEPS::FunctionCategory;
     using SSys  = ::Opm::SatFunc::CreateEPS::SubSystem;
-    using PhIdx = ::Opm::ECLOutput::PhaseIndex;
+    using PhIdx = ::Opm::ECLPhaseIndex;
 
     assert (((opt.curve == FCat::CapPress) ||
              (! opt.use3PtScaling)) && "Internal Logic Error");
@@ -890,7 +890,7 @@ scalingFunction(const ::Opm::ECLGraph&                       G,
 {
     using FCat  = ::Opm::SatFunc::CreateEPS::FunctionCategory;
     using SSys  = ::Opm::SatFunc::CreateEPS::SubSystem;
-    using PhIdx = ::Opm::ECLOutput::PhaseIndex;
+    using PhIdx = ::Opm::ECLPhaseIndex;
 
     assert ((opt.use3PtScaling && (opt.curve == FCat::Relperm))
             && "Internal Error Selecting EPS Family");
@@ -936,7 +936,7 @@ Create::ThreePoint::unscaledEndPoints(const RTEP& ep, const EPSOpt& opt)
 {
     using FCat  = ::Opm::SatFunc::CreateEPS::FunctionCategory;
     using SSys  = ::Opm::SatFunc::CreateEPS::SubSystem;
-    using PhIdx = ::Opm::ECLOutput::PhaseIndex;
+    using PhIdx = ::Opm::ECLPhaseIndex;
 
     assert ((opt.use3PtScaling && (opt.curve == FCat::Relperm))
             && "Internal Error Selecting EPS Family");

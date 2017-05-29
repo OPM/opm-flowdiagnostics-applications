@@ -128,7 +128,7 @@ namespace example {
             Opm::ECLFluxCalc calc(G, std::move(satfunc));
 
             auto getFlux = [&calc, &rstrt]
-                (const Opm::ECLOutput::PhaseIndex p)
+                (const Opm::ECLPhaseIndex         p)
             {
                 return calc.flux(rstrt, p);
             };
@@ -137,7 +137,7 @@ namespace example {
         }
 
         auto getFlux = [&G, &rstrt]
-            (const Opm::ECLOutput::PhaseIndex p)
+            (const Opm::ECLPhaseIndex         p)
         {
             return G.flux(rstrt, p);
         };
