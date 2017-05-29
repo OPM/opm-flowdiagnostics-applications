@@ -74,8 +74,11 @@ namespace Opm
         const double transmissibility = transmissibility_[connection];
         const double viscosity = 1.0 * prefix::centi * unit::Poise;
         const auto& pressure = dyn_data.pressure;
-        const double avg_kr = (dyn_data.relperm[c1] + dyn_data.relperm[c2]) / 2.0;
-        const double mobility = avg_kr / viscosity;
+
+        const int upwind_cell = (pressure[c2] > pressure[c1]) ? c2 : c1;
+        const double kr = dyn_data.relperm[upwind_cell];
+
+        const double mobility = kr / viscosity;
         return mobility * transmissibility * (pressure[c1] - pressure[c2]);
     }
 
