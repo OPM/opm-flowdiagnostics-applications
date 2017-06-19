@@ -48,12 +48,9 @@
 #include <ert/ecl/ecl_kw.h>
 #include <ert/ecl/ecl_kw_magic.h>
 #include <ert/ecl/ecl_nnc_export.h>
+#include <ert/ecl/ecl_type.h>
 #include <ert/ecl/ecl_util.h>
 #include <ert/util/ert_unique_ptr.hpp>
-
-#if defined(HAVE_ERT_ECL_TYPE_H) && HAVE_ERT_ECL_TYPE_H
-#include <ert/ecl/ecl_type.h>
-#endif // defined(HAVE_ERT_ECL_TYPE_H) && HAVE_ERT_ECL_TYPE_H
 
 /// \file
 ///
@@ -63,13 +60,7 @@ namespace {
     inline ecl_type_enum
     getKeywordElementType(const ecl_kw_type* kw)
     {
-#if defined(HAVE_ERT_ECL_TYPE_H) && HAVE_ERT_ECL_TYPE_H
         return ecl_type_get_type(ecl_kw_get_data_type(kw));
-
-#else // ! (defined(HAVE_ERT_ECL_TYPE_H) && HAVE_ERT_ECL_TYPE_H)
-
-        return ecl_kw_get_type(kw);
-#endif // defined(HAVE_ERT_ECL_TYPE_H) && HAVE_ERT_ECL_TYPE_H
     }
 
     namespace ECLImpl {
