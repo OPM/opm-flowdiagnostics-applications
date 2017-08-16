@@ -126,6 +126,10 @@ namespace Opm {
                 const ECLRestartData& rstrt,
                 const ECLPhaseIndex   p) const;
 
+        using SatFuncTable = std::pair<std::vector<double>, std::vector<double>>;
+
+        SatFuncTable waterSatFunc(const int cell) const;
+
     private:
         /// Implementation backend.
         class Impl;
