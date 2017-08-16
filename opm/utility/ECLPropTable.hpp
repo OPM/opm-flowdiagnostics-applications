@@ -105,6 +105,17 @@ namespace Opm {
         /// Retrieve maximum saturation in all tables.
         std::vector<double> maximumSat() const;
 
+        /// Retrieve raw data for specific table.
+        ///
+        /// \param[in] t ID of sub-table of interpolant.
+        ///
+        /// \param[in] c ID of result column/dependent variable.
+        ///
+        /// \return Abcissa and ordinate data vectors for requested table.
+        std::pair<std::vector<double>, std::vector<double>>
+        rawTableData(const InTable& t,
+                     const ResultColumn& c) const;
+
     private:
         /// Single tabulated 1D interpolant.
         class SingleTable
@@ -155,6 +166,13 @@ namespace Opm {
 
             /// Retrieve maximum saturation in table.
             double maximumSat() const;
+
+            /// Retrieve abcissa values.
+            std::vector<double> abcissa() const;
+
+            /// Retrieve ordinate values for specific column of data.
+            std::vector<double> ordinate(const ECLPropTableRawData::SizeType nCols,
+                                         const ResultColumn& c) const;
 
         private:
             /// Independent variable.
