@@ -109,8 +109,18 @@ public:
         return { b, e };
     }
 
+    int regionID(const int cell) const
+    {
+        if (regIdx_.empty()) {
+            return 0;
+        } else {
+            return regIdx_[cell];
+        }
+    }
+
 private:
     Opm::AssembledConnections map_;
+    std::vector<int> regIdx_;
 };
 
 RegionMapping::RegionMapping(const std::size_t       numCells,
@@ -128,6 +138,9 @@ RegionMapping::RegionMapping(const std::size_t       numCells,
         }
 
         this->map_.compress(1);
+
+        // Region index array is left empty in this case.
+        // See implementation of regionID() for handling.
     }
     else if (regIdx.size() != numCells) {
         throw std::invalid_argument {
@@ -152,6 +165,13 @@ RegionMapping::RegionMapping(const std::size_t       numCells,
         }
 
         this->map_.compress(maxReg + 1);
+
+        // Copy region index array, but again remember to adjust one-based
+        // SATNUM indices.
+        this->regIdx_ = regIdx;
+        for (int& r : this->regIdx_) {
+            --r;
+        }
     }
 }
 
