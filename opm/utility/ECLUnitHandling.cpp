@@ -66,6 +66,11 @@ namespace Opm { namespace ECLUnits {
             {
                 return Metric::Transmissibility;
             }
+
+            virtual double viscosity() const override
+            {
+                return Metric::Viscosity;
+            }
         };
 
         template <>
@@ -96,6 +101,11 @@ namespace Opm { namespace ECLUnits {
             {
                 return Field::Transmissibility;
             }
+
+            virtual double viscosity() const override
+            {
+                return Field::Viscosity;
+            }
         };
 
         template <>
@@ -125,6 +135,11 @@ namespace Opm { namespace ECLUnits {
             virtual double transmissibility() const override
             {
                 return Lab::Transmissibility;
+            }
+
+            virtual double viscosity() const override
+            {
+                return Lab::Viscosity;
             }
         };
 
@@ -164,6 +179,11 @@ namespace Opm { namespace ECLUnits {
                 using namespace unit;
 
                 return centi*Poise * cubic(meter) / (day * atm);
+            }
+
+            virtual double viscosity() const override
+            {
+                return prefix::centi*unit::Poise;
             }
         };
     } // namespace Impl

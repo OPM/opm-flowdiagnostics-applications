@@ -33,6 +33,7 @@ namespace Opm {
             virtual double reservoirVolume()  const = 0;
             virtual double time()             const = 0;
             virtual double transmissibility() const = 0;
+            virtual double viscosity()        const = 0;
         };
 
         std::unique_ptr<const UnitSystem>

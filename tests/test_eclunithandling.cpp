@@ -95,6 +95,14 @@ BOOST_AUTO_TEST_CASE (Metric)
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
+
+    // Viscosity (cP)
+    {
+        const auto scale  = M->viscosity();
+        const auto expect = 1.0e-3;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
 }
 
 BOOST_AUTO_TEST_CASE (Field)
@@ -137,6 +145,14 @@ BOOST_AUTO_TEST_CASE (Field)
     {
         const auto scale  = F->transmissibility();
         const auto expect = 2.668883979653090e-13;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Viscosity (cP)
+    {
+        const auto scale  = F->viscosity();
+        const auto expect = 1.0e-3;
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
@@ -185,6 +201,14 @@ BOOST_AUTO_TEST_CASE (Lab)
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
+
+    // Viscosity (cP)
+    {
+        const auto scale  = L->viscosity();
+        const auto expect = 1.0e-3;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
 }
 
 BOOST_AUTO_TEST_CASE (PVT_M)
@@ -227,6 +251,14 @@ BOOST_AUTO_TEST_CASE (PVT_M)
     {
         const auto scale  = P->transmissibility();
         const auto expect = 1.142272299439830e-13;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Viscosity (cP)
+    {
+        const auto scale  = P->viscosity();
+        const auto expect = 1.0e-3;
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
