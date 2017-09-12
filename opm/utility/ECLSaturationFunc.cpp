@@ -28,6 +28,9 @@
 #include <opm/utility/ECLPropTable.hpp>
 #include <opm/utility/ECLRegionMapping.hpp>
 #include <opm/utility/ECLResultData.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
+
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -100,14 +103,19 @@ namespace Relperm {
             Opm::ECLPropTableRawData
             tableData(const std::vector<int>&    tabdims,
                       const std::vector<double>& tab);
+
+            Opm::SatFuncInterpolant::ConvertUnits
+            unitConverter(const int usys);
         }
 
         class KrFunction
         {
         public:
             KrFunction(const std::vector<int>&    tabdims,
-                       const std::vector<double>& tab)
-                : func_(Details::tableData(tabdims, tab))
+                       const std::vector<double>& tab,
+                       const int                  usys)
+                : func_(Details::tableData(tabdims, tab),
+                        Details::unitConverter(usys))
             {}
 
             std::vector<double> sgco() const
@@ -157,6 +165,9 @@ namespace Relperm {
             tableData(const std::vector<int>&    tabdims,
                       const bool                 isTwoP,
                       const std::vector<double>& tab);
+
+            Opm::SatFuncInterpolant::ConvertUnits
+            unitConverter(const bool isTwoP);
         } // namespace Details
 
         class KrFunction
@@ -165,7 +176,8 @@ namespace Relperm {
             KrFunction(const std::vector<int>&    tabdims,
                        const bool                 isTwoP,
                        const std::vector<double>& tab)
-                : func_(Details::tableData(tabdims, isTwoP, tab))
+                : func_(Details::tableData(tabdims, isTwoP, tab),
+                        Details::unitConverter(isTwoP))
                 , twop_(isTwoP)
             {}
 
@@ -374,14 +386,19 @@ namespace Relperm {
             Opm::ECLPropTableRawData
             tableData(const std::vector<int>&    tabdims,
                       const std::vector<double>& tab);
+
+            Opm::SatFuncInterpolant::ConvertUnits
+            unitConverter(const int usys);
         } // namespace Details
 
         class KrFunction
         {
         public:
             KrFunction(const std::vector<int>&    tabdims,
-                       const std::vector<double>& tab)
-                : func_(Details::tableData(tabdims, tab))
+                       const std::vector<double>& tab,
+                       const int                  usys)
+                : func_(Details::tableData(tabdims, tab),
+                        Details::unitConverter(usys))
             {}
 
             std::vector<double> swco() const
@@ -446,6 +463,31 @@ Relperm::Gas::Details::tableData(const std::vector<int>&    tabdims,
     return t;
 }
 
+Opm::SatFuncInterpolant::ConvertUnits
+Relperm::Gas::Details::unitConverter(const int usys)
+{
+    using CU = Opm::SatFuncInterpolant::ConvertUnits;
+    using Cvrt = CU::Converter;
+
+    auto id = [](const double x) { return x; };
+
+    const auto u = ::Opm::ECLUnits::createUnitSystem(usys);
+
+    const auto pscale = u->pressure();
+
+    auto cvrt_press = [pscale](const double p) {
+        return ::Opm::unit::convert::from(p, pscale);
+    };
+
+    return CU {
+        Cvrt{ id },             // Sg
+        { Cvrt{ id },           // Krg
+          Cvrt{ cvrt_press } }  // Pcgo
+    };
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 Opm::ECLPropTableRawData
 Relperm::Oil::Details::tableData(const std::vector<int>&    tabdims,
                                  const bool                 isTwoP,
@@ -470,6 +512,25 @@ Relperm::Oil::Details::tableData(const std::vector<int>&    tabdims,
     return t;
 }
 
+Opm::SatFuncInterpolant::ConvertUnits
+Relperm::Oil::Details::unitConverter(const bool isTwoP)
+{
+    using CU = Opm::SatFuncInterpolant::ConvertUnits;
+    using Cvrt = CU::Converter;
+
+    auto id = [](const double x) { return x; };
+
+    //                          [Kro]            [Krow, Krog]
+    const auto ncvrt = isTwoP ? std::size_t{1} : std::size_t{2};
+
+    return CU {
+        Cvrt{ id },                          // So
+        std::vector<Cvrt>(ncvrt, Cvrt{ id }) // Kr
+    };
+}
+
+// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 Opm::ECLPropTableRawData
 Relperm::Water::Details::tableData(const std::vector<int>&    tabdims,
                                    const std::vector<double>& tab)
@@ -488,6 +549,29 @@ Relperm::Water::Details::tableData(const std::vector<int>&    tabdims,
     t.data.assign(&tab[start], &tab[start] + nTabElems);
 
     return t;
+}
+
+Opm::SatFuncInterpolant::ConvertUnits
+Relperm::Water::Details::unitConverter(const int usys)
+{
+    using CU = Opm::SatFuncInterpolant::ConvertUnits;
+    using Cvrt = CU::Converter;
+
+    auto id = [](const double x) { return x; };
+
+    const auto u = ::Opm::ECLUnits::createUnitSystem(usys);
+
+    const auto pscale = u->pressure();
+
+    auto cvrt_press = [pscale](const double p) {
+        return ::Opm::unit::convert::from(p, pscale);
+    };
+
+    return CU {
+        Cvrt{ id },             // Sw
+        { Cvrt{ id },           // Krw
+          Cvrt{ cvrt_press } }  // Pcow
+    };
 }
 
 // =====================================================================
@@ -780,7 +864,8 @@ private:
     std::unique_ptr<EPSEvaluator> eps_;
 
     void initRelPermInterp(const EPSEvaluator::ActPh& active,
-                           const ECLInitFileData&     init);
+                           const ECLInitFileData&     init,
+                           const int                  usys);
 
     void initEPS(const EPSEvaluator::ActPh& active,
                  const bool                 use3PtScaling,
@@ -870,7 +955,7 @@ Opm::ECLSaturationFunc::Impl::init(const ECLGraph&        G,
 
     const auto active = EPSEvaluator::ActPh{iphs};
 
-    this->initRelPermInterp(active, init);
+    this->initRelPermInterp(active, init, ih[INTEHEAD_UNIT_INDEX]);
 
     if (useEPS) {
         const auto& lh = init.keywordData<bool>(LOGIHEAD_KW);
@@ -891,7 +976,8 @@ Opm::ECLSaturationFunc::Impl::init(const ECLGraph&        G,
 void
 Opm::ECLSaturationFunc::
 Impl::initRelPermInterp(const EPSEvaluator::ActPh& active,
-                        const ECLInitFileData&     init)
+                        const ECLInitFileData&     init,
+                        const int                  usys)
 {
     const auto isThreePh =
         active.oil && active.gas && active.wat;
@@ -901,11 +987,11 @@ Impl::initRelPermInterp(const EPSEvaluator::ActPh& active,
     const auto& tab     = init.keywordData<double>("TAB");
 
     if (active.gas) {
-        this->gas_.reset(new Relperm::Gas::KrFunction(tabdims, tab));
+        this->gas_.reset(new Relperm::Gas::KrFunction(tabdims, tab, usys));
     }
 
     if (active.wat) {
-        this->wat_.reset(new Relperm::Water::KrFunction(tabdims, tab));
+        this->wat_.reset(new Relperm::Water::KrFunction(tabdims, tab, usys));
     }
 
     if (active.oil) {

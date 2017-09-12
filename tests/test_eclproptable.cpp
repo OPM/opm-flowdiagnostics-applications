@@ -81,6 +81,19 @@ namespace {
 
         return t;
     }
+
+    Opm::SatFuncInterpolant::ConvertUnits
+    createDummyUnitConverter(const std::size_t ncol)
+    {
+        using Cvrt = Opm::SatFuncInterpolant::ConvertUnits::Converter;
+
+        auto id = [](const double x) { return x; };
+
+        return Opm::SatFuncInterpolant::ConvertUnits {
+            Cvrt{ id },
+            std::vector<Cvrt>(ncol, Cvrt{ id })
+        };
+    }
 } // Namespace Anonymous
 
 // =====================================================================
@@ -101,7 +114,8 @@ BOOST_AUTO_TEST_CASE (EmptyTable)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(2)),
                       std::invalid_argument);
 }
 
@@ -118,7 +132,8 @@ BOOST_AUTO_TEST_CASE (SingleNode)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(2)),
                       std::invalid_argument);
 }
 
@@ -138,7 +153,8 @@ BOOST_AUTO_TEST_CASE (NoResultColumns)
     t.numCols   = 1;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(0)),
                       std::invalid_argument);
 }
 
@@ -162,7 +178,8 @@ BOOST_AUTO_TEST_CASE (EmptyTableLargeNodeAlloc)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(2)),
                       std::invalid_argument);
 }
 
@@ -187,7 +204,8 @@ BOOST_AUTO_TEST_CASE (SingleNodeLargeNodeAlloc)
     t.numCols   = 3;
     t.numTables = 1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(2)),
                       std::invalid_argument);
 }
 
@@ -215,7 +233,8 @@ BOOST_AUTO_TEST_CASE (NoResultColumnsLargeNodeAlloc)
     t.numCols   =  1;
     t.numTables =  1;
 
-    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t)),
+    BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
+                                              createDummyUnitConverter(2)),
                       std::invalid_argument);
 }
 
@@ -245,7 +264,10 @@ BOOST_AUTO_TEST_CASE (AtNodes)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s         = std::vector<double>{ 0.8, 0.3, 0.3, 0.2 };
     const auto kr_expect = std::vector<double>{ 0.5, 0.1, 0.1, 0.0 };
@@ -291,7 +313,10 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s         = std::vector<double>{ 0.80000001, 0.9, 0.199999999, 0.1 };
     const auto kr_expect = std::vector<double>{ 0.5,        0.5, 0.0,         0.0 };
@@ -325,7 +350,10 @@ BOOST_AUTO_TEST_CASE (Interpolation)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s = std::vector<double>{
         0.2000,
@@ -418,7 +446,10 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s = std::vector<double>{
         0.0000,
@@ -541,7 +572,10 @@ BOOST_AUTO_TEST_CASE (AtNodes)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s         = std::vector<double>{ 0.8, 0.3, 0.3, 0.2 };
     const auto kr_expect = std::vector<double>{ 0.5, 0.1, 0.1, 0.0 };
@@ -606,7 +640,10 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s         = std::vector<double>{ 0.80000001, 0.9, 0.199999999, 0.1 };
     const auto kr_expect = std::vector<double>{ 0.5,        0.5, 0.0,         0.0 };
@@ -662,7 +699,10 @@ BOOST_AUTO_TEST_CASE (Interpolation)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s = std::vector<double>{
         0.2000,
@@ -812,7 +852,10 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     const auto s = std::vector<double>{
         0.0000,
@@ -923,7 +966,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -972,7 +1018,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1009,7 +1058,10 @@ BOOST_AUTO_TEST_CASE (SWFN)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1059,7 +1111,10 @@ BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1096,7 +1151,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1147,7 +1205,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1187,7 +1248,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1239,7 +1303,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1279,7 +1346,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1331,7 +1401,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1373,7 +1446,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1425,7 +1501,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1486,7 +1565,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1586,7 +1668,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1641,7 +1726,10 @@ BOOST_AUTO_TEST_CASE (SWFN)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1745,7 +1833,10 @@ BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1797,7 +1888,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1899,7 +1993,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -1957,7 +2054,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -2063,7 +2163,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -2121,7 +2224,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -2227,7 +2333,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -2293,7 +2402,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 
@@ -2399,7 +2511,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
     // data.
-    const auto swfunc = Opm::SatFuncInterpolant(toRawTableFormat(t));
+    const auto swfunc = Opm::SatFuncInterpolant {
+        toRawTableFormat(t),
+        createDummyUnitConverter(t.numCols - 1)
+    };
 
     using ResultColumn = Opm::SatFuncInterpolant::ResultColumn;
 

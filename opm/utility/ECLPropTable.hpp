@@ -20,6 +20,10 @@
 #ifndef OPM_ECLPROPTABLE_HEADER_INCLUDED
 #define OPM_ECLPROPTABLE_HEADER_INCLUDED
 
+#include <opm/utility/ECLPiecewiseLinearInterpolant.hpp>
+#include <opm/utility/ECLTableInterpolation1D.hpp>
+
+#include <functional>
 #include <vector>
 
 /// \file
@@ -63,10 +67,29 @@ namespace Opm {
     class SatFuncInterpolant
     {
     public:
+        /// Protocol for converting raw table input data to strict SI unit
+        /// conventions.
+        struct ConvertUnits
+        {
+            /// Convenience type alias for a value transformation.
+            using Converter = std::function<double(const double)>;
+
+            /// How to convert the independent variate (1st column)
+            Converter indep;
+
+            /// How to convert the dependent variates (2nd... columns).
+            std::vector<Converter> column;
+        };
+
         /// Constructor.
         ///
         /// \param[in] raw Raw table data for this collection.
-        explicit SatFuncInterpolant(const ECLPropTableRawData& raw);
+        ///
+        /// \param[in] convert Unit conversion support.  Mostly applicable
+        ///    to capillary pressure.  Assumed to convert raw table data to
+        ///    strict SI unit conventions.
+        SatFuncInterpolant(const ECLPropTableRawData& raw,
+                           const ConvertUnits&        convert);
 
         /// Wrapper type to disambiguate API usage.  Represents a table ID.
         struct InTable {
@@ -120,6 +143,10 @@ namespace Opm {
             /// \param[in] xEnd One past the end of linear range of
             ///    independent variable values.
             ///
+            /// \param[in] convert Unit conversion support.  Mostly
+            ///    applicable to capillary pressure.  Assumed to convert raw
+            ///    table data to strict SI unit conventions.
+            ///
             /// \param[in,out] colIt Dependent/column range iterators.  On
             ///    input, point to the beginnings of ranges of results
             ///    pertinent to a single table.  On output, each iterator is
@@ -128,6 +155,7 @@ namespace Opm {
             ///    for the next table if relevant (and called in a loop).
             SingleTable(ElmIt               xBegin,
                         ElmIt               xEnd,
+                        const ConvertUnits& convert,
                         std::vector<ElmIt>& colIt);
 
             /// Evaluate 1D interpolant in sequence of points.
@@ -141,33 +169,29 @@ namespace Opm {
             /// \return Function values of dependent variable \p c evaluated
             ///    at points \p x.
             std::vector<double>
-            interpolate(const ECLPropTableRawData::SizeType nCols,
-                        const ResultColumn&                 c,
-                        const std::vector<double>&          x) const;
+            interpolate(const ResultColumn&        c,
+                        const std::vector<double>& x) const;
 
             /// Retrieve connate saturation in table.
             double connateSat() const;
 
             /// Retrieve critical saturation for particular result column in
             /// table.
-            double criticalSat(const ECLPropTableRawData::SizeType nCols,
-                               const ResultColumn&                 c) const;
+            double criticalSat(const ResultColumn& c) const;
 
             /// Retrieve maximum saturation in table.
             double maximumSat() const;
 
         private:
-            /// Independent variable.
-            std::vector<double> x_;
+            /// Extrapolation policy for property evaluator/interpolant.
+            using Extrap = ::Opm::Interp1D::PiecewisePolynomial::
+                ExtrapolationPolicy::Constant;
 
-            /// Dependent variable (or variables).  Row major (i.e., C)
-            /// ordering.  Number of elements: x_.size() * host.nCols_.
-            std::vector<double> y_;
+            /// Type of fundamental table interpolant.
+            using Backend = ::Opm::Interp1D::
+                PiecewisePolynomial::Linear<Extrap>;
 
-            /// Value of dependent variable at position (row,c).
-            double y(const ECLPropTableRawData::SizeType nCols,
-                     const ECLPropTableRawData::SizeType row,
-                     const ResultColumn&                 c) const;
+            Backend interp_;
         };
 
         /// Number of result/dependent variables (== #table cols - 1).
