@@ -75,6 +75,91 @@ namespace Opm {
         SizeType numTables{0};
     };
 
+    /// Build a sequence of table interpolants from raw tabulated data,
+    /// assuming table conventions in the INIT file's TABDIMS/TAB vectors.
+    ///
+    /// \tparam Interpolant Representation of a table interpolant.
+    template <class Interpolant>
+    struct MakeInterpolants
+    {
+        /// Create sequence of table interpolants.
+        ///
+        /// This function is aware of the internal layout of the INIT file's
+        /// tabulated function and knows how to identify table data ranges
+        /// corresponding to a single table.  In particular we know how to
+        /// the data according to region IDs and how to apply further
+        /// partitioning according to primary lookup keys (e.g., for RS
+        /// nodes in PVTO tables).
+        ///
+        /// \tparam Factory Interpolant construction function.  Usually a
+        ///    class constructor wrapped in a lambda.  The call
+        ///    \code
+        ///      I = Factory(xBegin, xEnd, colIt);
+        ///    \endcode
+        ///    must construct an instance \c I of type \p Interpolant.
+        ///    Here, \c xBegin and \c xEnd demarcate the range of a single
+        ///    table's independent variate and \c colIt are column iterators
+        ///    positioned at the beginning of each of the table's dependent
+        ///    (result) column.
+        ///
+        ///    Note: The construction function is expected to advance each
+        ///    column iterator across \code distance(xBegin, xEnd) \endcode
+        ///    entries.
+        ///
+        /// \param[in] raw Raw tabulated data.  Must correspond to a single
+        ///    table vector, e.g. the SWFN data.
+        ///
+        /// \param[in] construct Callback function that knows how to build a
+        ///    single interpolant given a sequence ranges of of independent
+        ///    and dependent tabulated function values.  Must advance the
+        ///    dependent column iterators and perform appropriate unit
+        ///    conversion on the table data if needed (e.g., for capillary
+        ///    pressure data or viscosity values).
+        template <class Factory>
+        static std::vector<Interpolant>
+        fromRawData(const ECLPropTableRawData& raw,
+                    Factory&&                  construct)
+        {
+            auto interp = std::vector<Interpolant>{};
+
+            const auto numInterp = raw.numTables * raw.numPrimary;
+
+            // Table format: numRows*numInterp values of first column
+            // (indep. var) followed by numCols-1 dependent variable
+            // (function value result) columns of numRows*numInterp values
+            // each, one column at a time.
+            const auto colStride = raw.numRows * numInterp;
+
+            // Position column iterators (independent variable and results
+            // respectively) at beginning of each pertinent table column.
+            auto xBegin = std::begin(raw.data);
+            auto colIt  = std::vector<decltype(xBegin)> {
+                xBegin + colStride
+            };
+
+            for (auto col = 0*raw.numCols + 1;
+                      col <   raw.numCols - 1; ++col)
+            {
+                colIt.push_back(colIt.back() + colStride);
+            }
+
+            // Construct actual interpolants by invoking the
+            // constructor/factory function on each sub-table.
+            for (auto i = 0*numInterp;
+                      i <   numInterp; ++i, xBegin += raw.numRows)
+            {
+                auto xEnd = xBegin + raw.numRows;
+
+                // Layering violation:
+                //    The constructor is expected to advance the result
+                //    column iterators across 'numRows' entries.
+                interp.push_back(construct(xBegin, xEnd, colIt));
+            }
+
+            return interp;
+        }
+    };
+
     /// Collection of 1D interpolants from tabulated functions (e.g., the
     /// saturation functions).
     class SatFuncInterpolant

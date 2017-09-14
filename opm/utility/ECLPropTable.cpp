@@ -19,13 +19,8 @@
 
 #include <opm/utility/ECLPropTable.hpp>
 
-#include <algorithm>
-#include <cassert>
-#include <cmath>
 #include <exception>
-#include <iterator>
 #include <stdexcept>
-#include <utility>
 
 Opm::SatFuncInterpolant::SingleTable::
 SingleTable(ElmIt               xBegin,
@@ -101,38 +96,27 @@ Opm::SatFuncInterpolant::SatFuncInterpolant(const ECLPropTableRawData& raw,
                                             const ConvertUnits&        convert)
     : nResCols_(raw.numCols - 1)
 {
+    using ElmIt = ::Opm::ECLPropTableRawData::ElementIterator;
+
+    if (raw.numPrimary != 1) {
+        throw std::invalid_argument {
+            "Saturation Interpolant Does Not Support Multiple Sub-Tables"
+        };
+    }
+
     if (raw.numCols < 2) {
         throw std::invalid_argument {
             "Malformed Property Table"
         };
     }
 
-    this->table_.reserve(raw.numTables);
-
-    // Table format: numRows*numTables values of first column (indep. var)
-    // followed by numCols-1 dependent variable (function value result)
-    // columns of numRows*numTables values each, one column at a time.
-    const auto colStride = raw.numRows * raw.numTables;
-
-    // Position column iterators (independent variable and results
-    // respectively) at beginning of each pertinent table column.
-    auto xBegin = std::begin(raw.data);
-    auto colIt  = std::vector<decltype(xBegin)>{ xBegin + colStride };
-    for (auto col = 0*raw.numCols + 1; col < raw.numCols - 1; ++col) {
-        colIt.push_back(colIt.back() + colStride);
-    }
-
-    for (auto t = 0*raw.numTables;
-              t <   raw.numTables;
-         ++t, xBegin += raw.numRows)
+    this->table_ = MakeInterpolants<SingleTable>::fromRawData(raw,
+        [&convert](ElmIt xBegin, ElmIt xEnd, std::vector<ElmIt>& colIt)
     {
-        auto xEnd = xBegin + raw.numRows;
-
-        // Note: The SingleTable ctor advances each 'colIt' across numRows
-        // entries.  That is a bit of a layering violation, but helps in the
-        // implementation of this loop.
-        this->table_.push_back(SingleTable(xBegin, xEnd, convert, colIt));
-    }
+        // Note: this constructor needs to advance each 'colIt' across
+        // distance(xBegin, xEnd) entries.
+        return SingleTable(xBegin, xEnd, convert, colIt);
+    });
 }
 
 std::vector<double>
