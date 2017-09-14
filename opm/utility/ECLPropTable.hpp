@@ -47,19 +47,32 @@ namespace Opm {
 
         /// Raw table data.  Column major (Fortran) order.  Typically
         /// copied/extracted directly from TAB vector of INIT result-set.
-        DataVector data;
+        /// Array of size \code numRows * numCols * numPrimary \endcode for
+        /// each table, stored consecutively.
+        DataVector data{};
+
+        /// Primary lookup key for 2D interpolation.  Only relevant for PVT
+        /// tables of wet gas and/or live oil (Pg or Rs, respectively).
+        /// Array of size \c numPrimary elements for each table, stored
+        /// consecutively.
+        DataVector primaryKey{};
+
+        /// Number of primary key elements for each individual table.  Only
+        /// relevant (i.e., != 1) for PVT tables of wet gas and/or live oil.
+        SizeType numPrimary{0};
 
         /// Number of rows allocated in the result set for each individual
-        /// table.  Typically corresponds to setting in one of the *DIMS
-        /// keywords.  Should normally be at least two.
-        SizeType numRows;
+        /// primary key.  Typically corresponds to setting in one of the
+        /// *DIMS keywords.  Should normally be at least two for saturation
+        /// functions.
+        SizeType numRows{0};
 
         /// Number of columns in this table.  Varies by keyword/table.
-        SizeType numCols;
+        SizeType numCols{0};
 
         /// Number of tables of this type.  Must match the corresponding
         /// region keyword.
-        SizeType numTables;
+        SizeType numTables{0};
     };
 
     /// Collection of 1D interpolants from tabulated functions (e.g., the

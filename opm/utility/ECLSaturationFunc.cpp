@@ -449,9 +449,10 @@ Relperm::Gas::Details::tableData(const std::vector<int>&    tabdims,
 {
     auto t = Opm::ECLPropTableRawData{};
 
-    t.numCols   = 3;            // Sg, Krg, Pcgo
-    t.numRows   = tabdims[ TABDIMS_NSSGFN_ITEM ];
-    t.numTables = tabdims[ TABDIMS_NTSGFN_ITEM ];
+    t.numPrimary = 1;
+    t.numCols    = 3;           // Sg, Krg, Pcgo
+    t.numRows    = tabdims[ TABDIMS_NSSGFN_ITEM ];
+    t.numTables  = tabdims[ TABDIMS_NTSGFN_ITEM ];
 
     const auto nTabElems = t.numRows * t.numTables * t.numCols;
 
@@ -495,6 +496,8 @@ Relperm::Oil::Details::tableData(const std::vector<int>&    tabdims,
 {
     auto t = Opm::ECLPropTableRawData{};
 
+    t.numPrimary = 1;
+
     t.numCols = isTwoP
         ? 2                     // So, Kro
         : 3;                    // So, Krow, Krog
@@ -537,9 +540,10 @@ Relperm::Water::Details::tableData(const std::vector<int>&    tabdims,
 {
     auto t = Opm::ECLPropTableRawData{};
 
-    t.numCols   = 3;            // Sw, Krw, Pcow
-    t.numRows   = tabdims[ TABDIMS_NSSWFN_ITEM ];
-    t.numTables = tabdims[ TABDIMS_NTSWFN_ITEM ];
+    t.numPrimary = 1;
+    t.numCols    = 3;           // Sw, Krw, Pcow
+    t.numRows    = tabdims[ TABDIMS_NSSWFN_ITEM ];
+    t.numTables  = tabdims[ TABDIMS_NTSWFN_ITEM ];
 
     const auto nTabElems = t.numRows * t.numTables * t.numCols;
 

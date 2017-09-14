@@ -110,9 +110,10 @@ BOOST_AUTO_TEST_CASE (EmptyTable)
         // s, kr  , pc
     };
 
-    t.numRows   = 0;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 0;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(2)),
@@ -128,9 +129,10 @@ BOOST_AUTO_TEST_CASE (SingleNode)
         0.3 , 0.1 , 0.0,
     };
 
-    t.numRows   = 1;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 1;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(2)),
@@ -149,9 +151,10 @@ BOOST_AUTO_TEST_CASE (NoResultColumns)
         0.8,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 1;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 1;
+    t.numTables  = 1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(0)),
@@ -174,9 +177,10 @@ BOOST_AUTO_TEST_CASE (EmptyTableLargeNodeAlloc)
         1.0e+20 ,  1.0e+20, 0.0,
     };
 
-    t.numRows   = 8;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 8;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(2)),
@@ -200,9 +204,10 @@ BOOST_AUTO_TEST_CASE (SingleNodeLargeNodeAlloc)
         1.0e+20 ,  1.0e+20, 0.0,
     };
 
-    t.numRows   = 9;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 9;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(2)),
@@ -229,9 +234,10 @@ BOOST_AUTO_TEST_CASE (NoResultColumnsLargeNodeAlloc)
         1.0e+20,
     };
 
-    t.numRows   = 12;
-    t.numCols   =  1;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 12;
+    t.numCols    =  1;
+    t.numTables  =  1;
 
     BOOST_CHECK_THROW(Opm::SatFuncInterpolant(toRawTableFormat(t),
                                               createDummyUnitConverter(2)),
@@ -257,9 +263,10 @@ BOOST_AUTO_TEST_CASE (AtNodes)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -306,9 +313,10 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -343,9 +351,10 @@ BOOST_AUTO_TEST_CASE (Interpolation)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -439,9 +448,10 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -565,9 +575,10 @@ BOOST_AUTO_TEST_CASE (AtNodes)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -633,9 +644,10 @@ BOOST_AUTO_TEST_CASE (AboveAndBelow)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -692,9 +704,10 @@ BOOST_AUTO_TEST_CASE (Interpolation)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -845,9 +858,10 @@ BOOST_AUTO_TEST_CASE (InterpolationLargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Note: Need to convert input table to column major (Fortran) order
     // because that is the format in which PropTable1D expects the tabular
@@ -954,9 +968,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2 };
@@ -1006,9 +1021,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2 };
@@ -1046,9 +1062,10 @@ BOOST_AUTO_TEST_CASE (SWFN)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2  };
@@ -1099,9 +1116,10 @@ BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2 };
@@ -1138,9 +1156,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 };
@@ -1192,9 +1211,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 };
@@ -1235,9 +1255,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  };
@@ -1290,9 +1311,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  };
@@ -1333,9 +1355,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  };
@@ -1388,9 +1411,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  };
@@ -1433,9 +1457,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
         0.8  , 0.5 , 0.8,
     };
 
-    t.numRows   = 6;
-    t.numCols   = 3;
-    t.numTables = 1;
+    t.numPrimary = 1;
+    t.numRows    = 6;
+    t.numCols    = 3;
+    t.numTables  = 1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2   };
@@ -1488,9 +1513,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  1;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  1;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2   };
@@ -1553,9 +1579,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
@@ -1656,9 +1683,10 @@ BOOST_AUTO_TEST_CASE (SWFN_CritIsConn_LargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
@@ -1714,9 +1742,10 @@ BOOST_AUTO_TEST_CASE (SWFN)
         0.8 , 0.5 , 0.0,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
@@ -1821,9 +1850,10 @@ BOOST_AUTO_TEST_CASE (SWFN_LargeNodeAlloc)
         1.0e20 , 1.0e+100 , 0.0, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect = std::vector<double>{ 0.2 , 0.1 , 0.1 , 0.0  };
@@ -1875,9 +1905,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 3;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 3;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2, 0.2, 0.2, 0.2 };
@@ -1980,9 +2011,10 @@ BOOST_AUTO_TEST_CASE (SOF3_CritIsConn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 15
     };
 
-    t.numRows   = 15;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 15;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2, 0.1, 0.0, 0.1 };
@@ -2041,9 +2073,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
@@ -2150,9 +2183,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOGCR_is_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.1 , 0.2 };
@@ -2211,9 +2245,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn)
         0.8 , 0.5 , 0.8,
     };
 
-    t.numRows   = 4;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 4;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.2 , 0.2  };
@@ -2320,9 +2355,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SOWCR_is_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2 , 0.2 , 0.0 , 0.2     };
@@ -2389,9 +2425,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn)
         0.9  , 0.8 , 0.9,
     };
 
-    t.numRows   = 6;
-    t.numCols   = 3;
-    t.numTables = 4;
+    t.numPrimary = 1;
+    t.numRows    = 6;
+    t.numCols    = 3;
+    t.numTables  = 4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  , 0.2  , 0.2  , 0.2   };
@@ -2498,9 +2535,10 @@ BOOST_AUTO_TEST_CASE (SOF3_SCR_Not_Conn_LargeNodeAlloc)
         1.0e20 ,  1.0e+100,  1.0e+100, // 16
     };
 
-    t.numRows   = 16;
-    t.numCols   =  3;
-    t.numTables =  4;
+    t.numPrimary =  1;
+    t.numRows    = 16;
+    t.numCols    =  3;
+    t.numTables  =  4;
 
     // Table end-points
     const auto sconn_expect      = std::vector<double>{ 0.2  , 0.1  , 0.2  , 0.2  };
