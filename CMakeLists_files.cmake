@@ -25,6 +25,8 @@ list (APPEND MAIN_SOURCE_FILES
         opm/utility/ECLFluxCalc.cpp
         opm/utility/ECLGraph.cpp
         opm/utility/ECLPropTable.cpp
+        opm/utility/ECLPvtCommon.cpp
+        opm/utility/ECLPvtGas.cpp
         opm/utility/ECLRegionMapping.cpp
         opm/utility/ECLResultData.cpp
         opm/utility/ECLSaturationFunc.cpp
@@ -36,6 +38,7 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
         tests/test_eclendpointscaling.cpp
         tests/test_eclproptable.cpp
+        tests/test_eclpvtcommon.cpp
         tests/test_eclregionmapping.cpp
         tests/test_eclsimple1dinterpolant.cpp
         tests/test_eclunithandling.cpp
@@ -59,6 +62,8 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLPhaseIndex.hpp
         opm/utility/ECLPiecewiseLinearInterpolant.hpp
         opm/utility/ECLPropTable.hpp
+        opm/utility/ECLPvtCommon.hpp
+        opm/utility/ECLPvtGas.hpp
         opm/utility/ECLRegionMapping.hpp
         opm/utility/ECLResultData.hpp
         opm/utility/ECLSaturationFunc.hpp
