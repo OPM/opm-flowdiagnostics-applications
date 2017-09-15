@@ -23,6 +23,12 @@ option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 # Mandatory call to project
 project(opm-flowdiagnostics-applications CXX)
 
+if(OPM_COMMON_ROOT AND opm-common_DIR)
+  message(WARNING "Both the variables OPM_COMMON_ROOT and opm-common_DIR are set. "
+    "Will use opm-common_DIR")
+  set(OPM_COMMON_ROOT "OPM_COMMON_ROOT-NOTFOUND")
+endif()
+
 if (NOT OPM_COMMON_ROOT)
   if(SIBLING_SEARCH AND NOT opm-common_DIR)
     # guess the sibling dir
