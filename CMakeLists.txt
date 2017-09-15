@@ -20,6 +20,9 @@ cmake_minimum_required (VERSION 2.8)
 set(OPM_COMMON_ROOT "" CACHE PATH "Root directory containing OPM related cmake modules")
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
 
+# Mandatory call to project
+project(opm-flowdiagnostics-applications CXX)
+
 if (NOT OPM_COMMON_ROOT)
    find_package(opm-common QUIET)
 endif()
