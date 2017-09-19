@@ -80,6 +80,22 @@ BOOST_AUTO_TEST_CASE (Metric)
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
 
+    // Surface Volume, Gas (sm3)
+    {
+        const auto scale  = M->surfaceVolumeGas();
+        const auto expect = 1.0;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Liquid (sm3)
+    {
+        const auto scale  = M->surfaceVolumeLiquid();
+        const auto expect = 1.0;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
     // Time (day)
     {
         const auto scale  = M->time();
@@ -128,6 +144,22 @@ BOOST_AUTO_TEST_CASE (Field)
     // Reservoir Volume (rb)
     {
         const auto scale  = F->reservoirVolume();
+        const auto expect = 1.589872949280001e-01;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Gas (Mscf)
+    {
+        const auto scale  = F->surfaceVolumeGas();
+        const auto expect = 2.831684659200000e+01;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Liquid (stb)
+    {
+        const auto scale  = F->surfaceVolumeLiquid();
         const auto expect = 1.589872949280001e-01;
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
@@ -186,6 +218,22 @@ BOOST_AUTO_TEST_CASE (Lab)
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
     }
 
+    // Surface Volume, Gas (s(cm)^3)
+    {
+        const auto scale  = L->surfaceVolumeGas();
+        const auto expect = 1.0e-06;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Liquid (s(cm)^3)
+    {
+        const auto scale  = L->surfaceVolumeLiquid();
+        const auto expect = 1.0e-06;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
     // Time (hour)
     {
         const auto scale  = L->time();
@@ -234,6 +282,22 @@ BOOST_AUTO_TEST_CASE (PVT_M)
     // Reservoir Volume (rm^3)
     {
         const auto scale  = P->reservoirVolume();
+        const auto expect = 1.0;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Gas (sm^3)
+    {
+        const auto scale  = P->surfaceVolumeGas();
+        const auto expect = 1.0;
+
+        BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);
+    }
+
+    // Surface Volume, Liquid (sm^3)
+    {
+        const auto scale  = P->surfaceVolumeLiquid();
         const auto expect = 1.0;
 
         BOOST_CHECK_CLOSE(scale, expect, 1.0e-10);

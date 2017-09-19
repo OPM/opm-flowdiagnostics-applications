@@ -57,6 +57,16 @@ namespace Opm { namespace ECLUnits {
                 return Metric::ReservoirVolume;
             }
 
+            virtual double surfaceVolumeGas() const override
+            {
+                return Metric::GasSurfaceVolume;
+            }
+
+            virtual double surfaceVolumeLiquid() const override
+            {
+                return Metric::LiquidSurfaceVolume;
+            }
+
             virtual double time() const override
             {
                 return Metric::Time;
@@ -92,6 +102,16 @@ namespace Opm { namespace ECLUnits {
                 return Field::ReservoirVolume;
             }
 
+            virtual double surfaceVolumeGas() const override
+            {
+                return Field::GasSurfaceVolume;
+            }
+
+            virtual double surfaceVolumeLiquid() const override
+            {
+                return Field::LiquidSurfaceVolume;
+            }
+
             virtual double time() const override
             {
                 return Field::Time;
@@ -125,6 +145,16 @@ namespace Opm { namespace ECLUnits {
             virtual double reservoirVolume() const override
             {
                 return Lab::ReservoirVolume;
+            }
+
+            virtual double surfaceVolumeGas() const override
+            {
+                return Lab::GasSurfaceVolume;
+            }
+
+            virtual double surfaceVolumeLiquid() const override
+            {
+                return Lab::LiquidSurfaceVolume;
             }
 
             virtual double time() const override
@@ -166,6 +196,16 @@ namespace Opm { namespace ECLUnits {
                 using namespace unit;
 
                 return cubic(meter);
+            }
+
+            virtual double surfaceVolumeGas() const override
+            {
+                return unit::cubic(unit::meter);
+            }
+
+            virtual double surfaceVolumeLiquid() const override
+            {
+                return unit::cubic(unit::meter);
             }
 
             virtual double time() const override
