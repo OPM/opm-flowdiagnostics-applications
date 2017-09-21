@@ -73,6 +73,13 @@ pressure(const ::Opm::ECLUnits::UnitSystem& usys)
     return createConverterToSI(usys.pressure());
 }
 
+::Opm::ECLPVT::ConvertUnits::Converter
+Opm::ECLPVT::CreateUnitConverter::ToSI::
+compressibility(const ::Opm::ECLUnits::UnitSystem& usys)
+{
+    return createConverterToSI(1.0 / usys.pressure());
+}
+
 Opm::ECLPVT::ConvertUnits::Converter
 Opm::ECLPVT::CreateUnitConverter::ToSI::
 disGas(const ::Opm::ECLUnits::UnitSystem& usys)

@@ -70,6 +70,17 @@ namespace Opm { namespace ECLPVT {
             static ConvertUnits::Converter
             pressure(const ::Opm::ECLUnits::UnitSystem& usys);
 
+            /// Convert quantities of type compressibility to strict SI
+            /// units of measure (i.e., to Pascal^-1 units).
+            ///
+            /// \param[in] usys Native unit system for particular result
+            ///    set.
+            ///
+            /// \return Value transformation function affecting requisite
+            ///    unit conversion.
+            static ConvertUnits::Converter
+            compressibility(const ::Opm::ECLUnits::UnitSystem& usys);
+
             /// Convert quantities of type dissolved gas-oil ratio (Rs) to
             /// strict SI units of measure (i.e., to Sm^3/Sm^3).
             ///

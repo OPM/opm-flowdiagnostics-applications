@@ -46,6 +46,7 @@ struct ConvertToSI
     explicit ConvertToSI(const ::Opm::ECLUnits::UnitSystem& usys);
 
     double press  { 0.0 };
+    double compr  { 0.0 };
     double disgas { 0.0 };
     double vapoil { 0.0 };
 
@@ -77,6 +78,9 @@ ConvertToSI::ConvertToSI(const ::Opm::ECLUnits::UnitSystem& usys)
 
     // Pressure
     this->press = apply(Cvrt::pressure(usys));
+
+    // Compressibility
+    this->compr = apply(Cvrt::compressibility(usys));
 
     // Dissolved gas-oil ratio (Rs)
     this->disgas = apply(Cvrt::disGas(usys));
@@ -152,6 +156,9 @@ BOOST_AUTO_TEST_CASE (Metric)
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 1.0e5, 1.0e-10);
 
+    // Compressibility
+    BOOST_CHECK_CLOSE(scale.compr, 1.0e-5, 1.0e-10);
+
     // Dissolved Gas-Oil Ratio (Rs)
     BOOST_CHECK_CLOSE(scale.disgas, 1.0, 1.0e-10);
 
@@ -208,6 +215,9 @@ BOOST_AUTO_TEST_CASE (Field)
 
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 6.894757293168360e+03, 1.0e-10);
+
+    // Compressibility
+    BOOST_CHECK_CLOSE(scale.compr, 1.450377377302092e-04, 1.0e-10);
 
     // Dissolved Gas-Oil Ratio (Rs)
     BOOST_CHECK_CLOSE(scale.disgas, 1.781076066790352e+02, 1.0e-10);
@@ -276,6 +286,9 @@ BOOST_AUTO_TEST_CASE (Lab)
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 101.325e3, 1.0e-10);
 
+    // Compressibility
+    BOOST_CHECK_CLOSE(scale.compr, 9.869232667160129e-06, 1.0e-10);
+
     // Dissolved Gas-Oil Ratio (Rs)
     BOOST_CHECK_CLOSE(scale.disgas, 1.0, 1.0e-10);
 
@@ -338,6 +351,9 @@ BOOST_AUTO_TEST_CASE (PVT_M)
 
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 101.325e3, 1.0e-10);
+
+    // Compressibility
+    BOOST_CHECK_CLOSE(scale.compr, 9.869232667160129e-06, 1.0e-10);
 
     // Dissolved Gas-Oil Ratio (Rs)
     BOOST_CHECK_CLOSE(scale.disgas, 1.0, 1.0e-10);
