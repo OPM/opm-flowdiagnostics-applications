@@ -28,6 +28,7 @@ list (APPEND MAIN_SOURCE_FILES
         opm/utility/ECLPvtCommon.cpp
         opm/utility/ECLPvtGas.cpp
         opm/utility/ECLPvtOil.cpp
+        opm/utility/ECLPvtWater.cpp
         opm/utility/ECLRegionMapping.cpp
         opm/utility/ECLResultData.cpp
         opm/utility/ECLSaturationFunc.cpp
@@ -66,6 +67,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLPvtCommon.hpp
         opm/utility/ECLPvtGas.hpp
         opm/utility/ECLPvtOil.hpp
+        opm/utility/ECLPvtWater.hpp
         opm/utility/ECLRegionMapping.hpp
         opm/utility/ECLResultData.hpp
         opm/utility/ECLSaturationFunc.hpp
