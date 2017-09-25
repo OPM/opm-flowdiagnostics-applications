@@ -83,10 +83,10 @@ namespace Opm { namespace Interp1D {
                 ///    extrapolated to the left of the range of table's
                 ///    independent variate.
                 template <class TabulatedFunction, class Index>
-                double left(const double     /* xmin */,
-                            const double     /* x */,
-                            const Index         col ,
-                            TabulatedFunction&& f) const
+                double left(const std::vector<double>& /* xi */,
+                            const double               /* x */,
+                            const Index                col ,
+                            TabulatedFunction&&        f) const
                 {
                     return f(0, col);
                 }
@@ -103,7 +103,8 @@ namespace Opm { namespace Interp1D {
                 /// \tparam Index Integer type representing an index into
                 ///    the abscissas of the tabulated function.
                 ///
-                /// \param[in] xmax Location of rigth-most abscissa.  Unused.
+                /// \param[in] xi Location of tabulated function's abscissas
+                ///    (unused).
                 ///
                 /// \param[in] x Interpolation point (global coordinates).
                 ///    Unused.
@@ -111,8 +112,88 @@ namespace Opm { namespace Interp1D {
                 /// \param[in] col Column index identifying which dependent
                 ///    variate to extrapolate.
                 ///
-                /// \param[in] nRows Number of rows (abscissas) in
-                ///    function's underlying table representation.
+                /// \param[in] f Tabulated function instance.
+                ///
+                /// \return Value of \p col-th variate of tabulated function
+                ///    extrapolated to the rigth of the range of table's
+                ///    independent variate.
+                template <class TabulatedFunction, class Index>
+                double right(const std::vector<double>& xi,
+                             const double               /* x */,
+                             const Index                col,
+                             TabulatedFunction&&        f) const
+                {
+                    return f(xi.size() - 1, col);
+                }
+            };
+
+            /// Extrapolate function using extrapolated/estimated
+            /// derivatives in range end-points.
+            ///
+            /// Derivatives estimated from table points nearest to the end
+            /// of the range.
+            class Linearly
+            {
+            public:
+                /// Extrapolate function to the left of range using first
+                /// tabulated function value and estimated derivative.
+                ///
+                /// \tparam TabulatedFunction Representation of a tabulated
+                ///    function.  Must support function call operator such
+                ///    that the statement \code y = Func(i, col); \endcode
+                ///    returns the value of the \c col-th dependent variate
+                ///    at the \c i-th abscissa.
+                ///
+                /// \tparam Index Integer type representing an index into
+                ///    the abscissas of the tabulated function.
+                ///
+                /// \param[in] xi Location of tabulated function's abscissas.
+                ///
+                /// \param[in] x Interpolation point (global coordinates).
+                ///
+                /// \param[in] col Column index identifying which dependent
+                ///    variate to extrapolate.
+                ///
+                /// \param[in] f Tabulated function instance.
+                ///
+                /// \return Value of \p col-th variate of tabulated function
+                ///    extrapolated to the left of the range of table's
+                ///    independent variate.
+                template <class TabulatedFunction, class Index>
+                double left(const std::vector<double>& xi,
+                            const double               x,
+                            const Index                col,
+                            TabulatedFunction&&        f) const
+                {
+                    // Derivative of f(i,col)
+                    const auto f0   = f(0, col);
+                    const auto f1   = f(1, col);
+                    const auto dfdx = (f1 - f0) / (xi[1] - xi[0]);
+
+                    // <= 0 if ascending range.
+                    const auto dx   = x - xi.front();
+
+                    return f0 + (dfdx * dx);
+                }
+
+                /// Extrapolate function to the rigth of range using "last"
+                /// tabulated function value and estimated derivative.
+                ///
+                /// \tparam TabulatedFunction Representation of a tabulated
+                ///    function.  Must support function call operator such
+                ///    that the statement \code y = Func(i, col); \endcode
+                ///    returns the value of the \c col-th dependent variate
+                ///    at the \c i-th abscissa.
+                ///
+                /// \tparam Index Integer type representing an index into
+                ///    the abscissas of the tabulated function.
+                ///
+                /// \param[in] xi Location of tabulated function's abscissas.
+                ///
+                /// \param[in] x Interpolation point (global coordinates).
+                ///
+                /// \param[in] col Column index identifying which dependent
+                ///    variate to extrapolate.
                 ///
                 /// \param[in] f Tabulated function instance.
                 ///
@@ -120,13 +201,23 @@ namespace Opm { namespace Interp1D {
                 ///    extrapolated to the rigth of the range of table's
                 ///    independent variate.
                 template <class TabulatedFunction, class Index>
-                double right(const double     /* xmax */,
-                             const double     /* x */,
-                             const Index         col,
-                             const Index         nRows,
-                             TabulatedFunction&& f) const
+                double right(const std::vector<double>& xi,
+                             const double               x,
+                             const Index                col,
+                             TabulatedFunction&&        f) const
                 {
-                    return f(nRows - 1, col);
+                    const auto nRows = xi.size();
+
+                    // Derivative of f(i,col)
+                    const auto f0   = f(nRows - 2, col);
+                    const auto f1   = f(nRows - 1, col);
+                    const auto dfdx =
+                        (f1 - f0) / (xi[nRows - 1] - xi[nRows - 2]);
+
+                    // >= 0 if ascending range
+                    const auto dx = x - xi.back();
+
+                    return f1 + (dfdx * dx);
                 }
             };
 
@@ -158,7 +249,7 @@ namespace Opm { namespace Interp1D {
                 /// \tparam Index Integer type representing an index into
                 ///    the abscissas of the tabulated function.
                 ///
-                /// \param[in] xmin Location of left-most abscissa.
+                /// \param[in] xi Location of tabulated function's abscissas.
                 ///
                 /// \param[in] x Interpolation point (global coordinates).
                 ///
@@ -171,14 +262,14 @@ namespace Opm { namespace Interp1D {
                 ///    extrapolated to the left of the range of table's
                 ///    independent variate.
                 template <class TabulatedFunction, class Index>
-                double left(const double        xmin,
-                            const double        x,
-                            const Index         col,
-                            TabulatedFunction&& f) const
+                double left(const std::vector<double>& xi,
+                            const double               x,
+                            const Index                col,
+                            TabulatedFunction&&        f) const
                 {
                     // Derivative of f(i,col) in f(i, nResCol_ + col)
                     const auto dfdx = f(0, this->nResCol_ + col);
-                    const auto dx   = x - xmin; // <= 0 if ascending range
+                    const auto dx   = x - xi.front(); // <= 0 if ascending range
 
                     return f(0, col) + (dfdx * dx);
                 }
@@ -195,7 +286,7 @@ namespace Opm { namespace Interp1D {
                 /// \tparam Index Integer type representing an index into
                 ///    the abscissas of the tabulated function.
                 ///
-                /// \param[in] xmax Location of rigth-most abscissa.
+                /// \param[in] xi Location of tabulated function's abscissas.
                 ///
                 /// \param[in] x Interpolation point (global coordinates).
                 ///
@@ -211,15 +302,16 @@ namespace Opm { namespace Interp1D {
                 ///    extrapolated to the rigth of the range of table's
                 ///    independent variate.
                 template <class TabulatedFunction, class Index>
-                double right(const double        xmax,
-                             const double        x,
-                             const Index         col,
-                             const Index         nRows,
-                             TabulatedFunction&& f) const
+                double right(const std::vector<double>& xi,
+                             const double               x,
+                             const Index                col,
+                             TabulatedFunction&&        f) const
                 {
+                    const auto nRows = xi.size();
+
                     // Derivative of f(i,col) in f(i, nResCol_ + col)
                     const auto dfdx = f(nRows - 1, this->nResCol_ + col);
-                    const auto dx   = x - xmax; // >= 0 if ascending range
+                    const auto dx   = x - xi.back(); // >= 0 if ascending range
 
                     return f(nRows - 1, col) + (dfdx * dx);
                 }

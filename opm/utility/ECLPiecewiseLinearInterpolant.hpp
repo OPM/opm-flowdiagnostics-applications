@@ -154,15 +154,14 @@ namespace Opm { namespace Interp1D { namespace PiecewisePolynomial {
                 // Extrapolate function ot the left of input range.
                 const auto xmin = this->x_.front();
 
-                return this->extrap_.left(xmin, xmin + pt.t, col, yval);
+                return this->extrap_.left(this->x_, xmin + pt.t, col, yval);
             }
 
             assert (pt.cat == PointCategory::RightOfRange);
 
             // Extrapolate function ot the right of input range.
             const auto xmax = this->x_.back();
-            return this->extrap_.right(xmax, xmax + pt.t, col,
-                                       this->x_.size(), yval);
+            return this->extrap_.right(this->x_, xmax + pt.t, col, yval);
         }
 
         /// Retrieve abscissas of interpolant's independent variate.

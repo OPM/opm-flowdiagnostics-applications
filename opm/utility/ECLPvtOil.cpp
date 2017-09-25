@@ -139,7 +139,7 @@ class LiveOil : public PVxOBase
 {
 public:
     using Extrap = ::Opm::Interp1D::PiecewisePolynomial::
-        ExtrapolationPolicy::LinearlyWithDerivatives;
+        ExtrapolationPolicy::Linearly;
 
     using SubtableInterpolant = ::Opm::Interp1D::PiecewisePolynomial::
         Linear<Extrap, /* IsAscendingRange = */ true>;
@@ -247,13 +247,13 @@ namespace {
                     std::vector<ElemIt>& colIt) -> StI
         {
             try {
-                return StI(Extrap{2}, xBegin, xEnd, colIt,
+                return StI(Extrap{}, xBegin, xEnd, colIt,
                            cvrt.second.indep,
                            cvrt.second.column);
             }
             catch (const std::invalid_argument&) {
                 // No valid nodes.  Return invalid.
-                return StI(Extrap{2});
+                return StI(Extrap{});
             }
         });
 

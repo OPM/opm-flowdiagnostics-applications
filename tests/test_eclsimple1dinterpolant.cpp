@@ -115,6 +115,23 @@ namespace {
                     });
     }
 
+    std::vector<double> spe1_pvdg_without_der()
+    {
+        return makeTable(3, {
+                // Pg                     1/Bg                      1/(Bg*vg)
+                1.470000000000000e+01,    6.000024000096000e-03,    7.500030000120000e-01, // 0
+                2.647000000000000e+02,    8.269246671628200e-02,    8.613798616279400e+00, // 1
+                5.147000000000000e+02,    1.593879502709600e-01,    1.423106698847900e+01, // 2
+                1.014700000000000e+03,    3.127932436659400e-01,    2.234237454756700e+01, // 3
+                2.014700000000000e+03,    6.195786864931800e-01,    3.278194108429500e+01, // 4
+                2.514700000000000e+03,    7.727975270479100e-01,    3.715372726191900e+01, // 5
+                3.014700000000000e+03,    9.259259259259300e-01,    4.061078622482100e+01, // 6
+                4.014700000000000e+03,    1.233045622688000e+00,    4.600916502567300e+01, // 7
+                5.014700000000000e+03,    1.540832049306600e+00,    4.986511486429200e+01, // 8
+                9.014700000000001e+03,    2.590673575129500e+00,    5.512071436445800e+01, // 9
+                    });
+    }
+
     std::vector<double> pvtg_subtable_zero_der()
     {
         return makeTable(5, {
@@ -634,7 +651,174 @@ BOOST_AUTO_TEST_CASE (SWOF)
     }
 }
 
-BOOST_AUTO_TEST_CASE (PVDG)
+BOOST_AUTO_TEST_CASE (PVDG_Estimated_Derivatives)
+{
+    const auto pvdg = spe1_pvdg_without_der();
+
+    const auto nRows = pvdg.size() / 3;
+    auto xBegin = std::begin(pvdg);
+    auto xEnd   = xBegin + nRows;
+
+    auto colIt = std::vector<decltype(xBegin)>{ xEnd };
+    for (auto j = 1; j < 2; ++j) {
+        colIt.push_back(colIt.back() + nRows);
+    }
+
+    using Extrap = PP::ExtrapolationPolicy::Linearly;
+    auto interp  = PP::Linear<Extrap>
+        { Extrap{}, xBegin, xEnd, colIt,
+          createDummyTransform(),
+          createDummyTransform(colIt.size()) };
+
+    // Extrapolation to the left.  d/dp estimated from first interval's size
+    // and function values.
+    {
+        const auto pt = interp.classifyPoint(10.0);
+
+        const auto bg       = interp.evaluate(0, pt);
+        const auto bg_by_vg = interp.evaluate(1, pt);
+
+        // PVDG(1,2) + ((PVDG(2,2) - PVDG(1,2))/(PVDG(2,1) - PVDG(1,1))*pt.t
+        BOOST_CHECK_CLOSE(bg, 4.558206077031703e-03, 1.0e-10);
+
+        // PVDG(1,3) + ((PVDG(2,3) - PVDG(1,3))/(PVDG(2,1) - PVDG(1,1))*pt.t
+        BOOST_CHECK_CLOSE(bg_by_vg, 6.021636424261729e-01, 1.0e-10);
+    }
+
+    // Extrapolation to the right.  d/dp estimated from last interval's size
+    // and function values.
+    {
+        const auto pt = interp.classifyPoint(10.0147e+3);
+
+        const auto bg       = interp.evaluate(0, pt);
+        const auto bg_by_vg = interp.evaluate(1, pt);
+
+        // PVDG(1,2) + ((PVDG(2,2) - PVDG(1,2))/(PVDG(2,1) - PVDG(1,1))*pt.t
+        BOOST_CHECK_CLOSE(bg, 2.853133956585225e+00, 1.0e-10);
+
+        // PVDG(1,3) + ((PVDG(2,3) - PVDG(1,3))/(PVDG(2,1) - PVDG(1,1))*pt.t
+        BOOST_CHECK_CLOSE(bg_by_vg, 5.643461423949950e+01, 1.0e-10);
+    }
+
+    // First interval.  Pg \in [14.7, 264.7).
+    {
+        const auto Pg = std::vector<double> {
+            14.7, 64.7, 114.7, 164.7, 214.7, 264.7 };
+
+        const auto bg_expect = std::vector<double> {
+            6.000024000096000e-03,
+            2.133851254333320e-02,
+            3.667700108657040e-02,
+            5.201548962980759e-02,
+            6.735397817304480e-02,
+            8.269246671628200e-02,
+        };
+
+        const auto bg_by_vg_expect = std::vector<double> {
+            7.500030000120000e-01,
+            2.322762123265480e+00,
+            3.895521246518960e+00,
+            5.468280369772439e+00,
+            7.041039493025919e+00,
+            8.613798616279400e+00,
+        };
+
+        auto bg       = std::vector<double>{}; bg      .reserve(Pg.size());
+        auto bg_by_vg = std::vector<double>{}; bg_by_vg.reserve(Pg.size());
+
+        for (const auto& pgi : Pg) {
+            const auto pt = interp.classifyPoint(pgi);
+
+            bg      .push_back(interp.evaluate(0, pt));
+            bg_by_vg.push_back(interp.evaluate(1, pt));
+        }
+
+        check_is_close(bg      , bg_expect      );
+        check_is_close(bg_by_vg, bg_by_vg_expect);
+    }
+
+    // Second interval.  Pg \in [264.7, 514.7).
+    {
+        const auto Pg = std::vector<double> {
+            264.7, 314.7, 364.7, 414.7, 464.7, 514.7 };
+
+        const auto bg_expect = std::vector<double> {
+            8.269246671628200e-02,
+            9.803156342721760e-02,
+            1.133706601381532e-01,
+            1.287097568490888e-01,
+            1.440488535600244e-01,
+            1.593879502709600e-01,
+        };
+
+        const auto bg_by_vg_expect = std::vector<double> {
+            8.613798616279400e+00,
+            9.737252290719320e+00,
+            1.086070596515924e+01,
+            1.198415963959916e+01,
+            1.310761331403908e+01,
+            1.423106698847900e+01,
+        };
+
+        auto bg       = std::vector<double>{}; bg      .reserve(Pg.size());
+        auto bg_by_vg = std::vector<double>{}; bg_by_vg.reserve(Pg.size());
+
+        for (const auto& pgi : Pg) {
+            const auto pt = interp.classifyPoint(pgi);
+
+            bg      .push_back(interp.evaluate(0, pt));
+            bg_by_vg.push_back(interp.evaluate(1, pt));
+        }
+
+        check_is_close(bg      , bg_expect      );
+        check_is_close(bg_by_vg, bg_by_vg_expect);
+    }
+
+    // Last interval.  Pg \in [5014.7, 9014.7).
+    {
+        const auto Pg = std::vector<double> {
+            5014.7, 5514.7, 6014.7, 6514.7, 7014.7, 7514.7, 8014.7, 8514.7, 9014.7 };
+
+        const auto bg_expect = std::vector<double> {
+            1.540832049306600e+00,
+            1.672062240034462e+00,
+            1.803292430762325e+00,
+            1.934522621490187e+00,
+            2.065752812218050e+00,
+            2.196983002945912e+00,
+            2.328213193673775e+00,
+            2.459443384401637e+00,
+            2.590673575129500e+00,
+        };
+
+        const auto bg_by_vg_expect = std::vector<double> {
+            4.986511486429200e+01,
+            5.052206480181275e+01,
+            5.117901473933350e+01,
+            5.183596467685425e+01,
+            5.249291461437500e+01,
+            5.314986455189575e+01,
+            5.380681448941650e+01,
+            5.446376442693725e+01,
+            5.512071436445800e+01,
+        };
+
+        auto bg       = std::vector<double>{}; bg      .reserve(Pg.size());
+        auto bg_by_vg = std::vector<double>{}; bg_by_vg.reserve(Pg.size());
+
+        for (const auto& pgi : Pg) {
+            const auto pt = interp.classifyPoint(pgi);
+
+            bg      .push_back(interp.evaluate(0, pt));
+            bg_by_vg.push_back(interp.evaluate(1, pt));
+        }
+
+        check_is_close(bg      , bg_expect      );
+        check_is_close(bg_by_vg, bg_by_vg_expect);
+    }
+}
+
+BOOST_AUTO_TEST_CASE (PVDG_Tabulated_Derivatives)
 {
     const auto pvdg = spe1_pvdg_incl_der();
 
