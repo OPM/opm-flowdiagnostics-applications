@@ -25,7 +25,11 @@
 #include <opm/utility/ECLTableInterpolation1D.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 
+#include <algorithm>
+#include <array>
 #include <functional>
+#include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <utility>
 #include <type_traits>
@@ -267,6 +271,100 @@ namespace Opm { namespace ECLPVT {
         };
     };
 
+    template <std::size_t N>
+    class DenseVector {
+    public:
+        explicit DenseVector(const std::array<double, N>& other)
+            : x_(other)
+        {}
+
+        DenseVector& operator+=(const DenseVector& rhs)
+        {
+            std::transform(std::begin(this->x_),
+                           std::end  (this->x_),
+                           std::begin(rhs  .x_),
+                           std::begin(this->x_),
+                           std::plus<double>());
+
+            return *this;
+        }
+
+        DenseVector& operator-=(const DenseVector& rhs)
+        {
+            std::transform(std::begin(this->x_),
+                           std::end  (this->x_),
+                           std::begin(rhs  .x_),
+                           std::begin(this->x_),
+                           std::minus<double>());
+
+            return *this;
+        }
+
+        DenseVector& operator*=(const double rhs)
+        {
+            std::transform(std::begin(this->x_),
+                           std::end  (this->x_),
+                           std::begin(this->x_),
+               [rhs](const double xi)
+            {
+                return rhs * xi;
+            });
+
+            return *this;
+        }
+
+        DenseVector& operator/=(const double rhs)
+        {
+            std::transform(std::begin(this->x_),
+                           std::end  (this->x_),
+                           std::begin(this->x_),
+               [rhs](const double xi)
+            {
+                return xi / rhs;
+            });
+
+            return *this;
+        }
+
+        const std::array<double, N>& array() const
+        {
+            return this->x_;
+        }
+
+    private:
+        std::array<double, N> x_;
+    };
+
+    template <std::size_t N>
+    DenseVector<N> operator/(DenseVector<N> v, const double a)
+    {
+        return v *= 1.0 / a;
+    }
+
+    template <std::size_t N>
+    DenseVector<N> operator*(const double a, DenseVector<N> v)
+    {
+        return v *= a;
+    }
+
+    template <std::size_t N>
+    DenseVector<N> operator*(DenseVector<N> v, const double a)
+    {
+        return v *= a;
+    }
+
+    template <std::size_t N>
+    DenseVector<N> operator+(DenseVector<N> u, const DenseVector<N>& v)
+    {
+        return u += v;
+    }
+
+    template <std::size_t N>
+    DenseVector<N> operator-(DenseVector<N> u, const DenseVector<N>& v)
+    {
+        return u -= v;
+    }
+
     /// Evaluate pressure-dependent properties (formation volume factor,
     /// viscosity &c) for dead oil (PVDO) or dry gas (PVDG) from tabulated
     /// functions as represented in an ECL result set (ECLInitData).
@@ -315,7 +413,7 @@ namespace Opm { namespace ECLPVT {
     private:
         /// Extrapolation policy for property evaluator/interpolant.
         using Extrap = ::Opm::Interp1D::PiecewisePolynomial::
-            ExtrapolationPolicy::LinearlyWithDerivatives;
+            ExtrapolationPolicy::Linearly;
 
         /// Type of fundamental table interpolant.
         using Backend = ::Opm::Interp1D::PiecewisePolynomial::Linear<Extrap>;
@@ -422,9 +520,13 @@ namespace Opm { namespace ECLPVT {
             return this->computeQuantity(key, x,
                 [this, col](const std::size_t     curve,
                             const InnerEvalPoint& pt) -> double
+            {   // IFunc: Interpolate 1 / B.
+                return this->propInterp_[curve].evaluate(col, pt);
+            },
+                [](const double recipFvF) -> double
             {
-                // 1 / (1 / B).
-                return 1 / this->propInterp_[curve].evaluate(col, pt);
+                // OFunc: Convert reciprocal FvF to ordinary FvF.
+                return 1.0 / recipFvF;
             });
         }
 
@@ -434,15 +536,29 @@ namespace Opm { namespace ECLPVT {
         {
             return this->computeQuantity(key, x,
                 [this](const std::size_t     curve,
-                       const InnerEvalPoint& pt) -> double
+                       const InnerEvalPoint& pt) -> DenseVector<2>
             {
+                // IFunc: Interpolate 1/B and 1/(B*mu)
                 const auto& I = this->propInterp_[curve];
 
                 const auto fvf_recip    = I.evaluate(0, pt);
                 const auto fvf_mu_recip = I.evaluate(1, pt);
 
-                // (1 / B) / (1 / (B*mu))
-                return fvf_recip / fvf_mu_recip;
+                // { (1 / B) , (1 / (B*mu)) }
+                return DenseVector<2>{
+                    std::array<double,2>{
+                        { fvf_recip, fvf_mu_recip }
+                    }
+                };
+            },
+                [](const DenseVector<2>& recipFvFVisc) -> double
+            {
+                // OFunc: Compute viscosity as
+                //   (1 / B) / (1 / B*mu)
+
+                const auto& v = recipFvFVisc.array();
+
+                return v[0] / v[1];
             });
         }
 
@@ -474,9 +590,10 @@ namespace Opm { namespace ECLPVT {
         }
 
         template <class Function>
-        double interpolate(Function&&              func,
-                           const OuterInterpPoint& outer,
-                           const double            x) const
+        auto interpolate(Function&&              func,
+                         const OuterInterpPoint& outer,
+                         const double            x) const
+            -> decltype(func(outer.interval, std::declval<InnerEvalPoint>()))
         {
             assert (outer.cat == ::Opm::Interp1D::PointCategory::InRange);
 
@@ -494,9 +611,10 @@ namespace Opm { namespace ECLPVT {
         }
 
         template <class Function>
-        double extrapLeft(Function&&              func,
-                          const OuterInterpPoint& outer,
-                          const double            x) const
+        auto extrapLeft(Function&&              func,
+                        const OuterInterpPoint& outer,
+                        const double            x) const
+            -> decltype(func(outer.interval, std::declval<InnerEvalPoint>()))
         {
             assert (outer.cat == ::Opm::Interp1D::PointCategory::LeftOfRange);
             assert (outer.interval == 0*this->key_.size());
@@ -514,9 +632,10 @@ namespace Opm { namespace ECLPVT {
         }
 
         template <class Function>
-        double extrapRight(Function&&              func,
-                           const OuterInterpPoint& outer,
-                           const double            x) const
+        auto extrapRight(Function&&              func,
+                         const OuterInterpPoint& outer,
+                         const double            x) const
+            -> decltype(func(outer.interval, std::declval<InnerEvalPoint>()))
         {
             const auto nIntervals = this->key_.size() - 1;
 
@@ -536,9 +655,11 @@ namespace Opm { namespace ECLPVT {
         }
 
         template <class Function>
-        double evaluate(const double key,
-                        const double x,
-                        Function&&   func) const
+        auto evaluate(const double key,
+                      const double x,
+                      Function&&   func) const
+            -> decltype(func(std::declval<OuterInterpPoint>().interval,
+                             std::declval<InnerEvalPoint>()))
         {
             const auto outer = ::Opm::Interp1D::PiecewisePolynomial::
                 LocalInterpPoint::identify(this->key_, key);
@@ -562,11 +683,12 @@ namespace Opm { namespace ECLPVT {
             };
         }
 
-        template <class Function>
+        template <class InnerFunction, class OuterFunction>
         std::vector<double>
         computeQuantity(const PrimaryKey&   key,
                         const InnerVariate& x,
-                        Function            func) const
+                        InnerFunction&&     ifunc,
+                        OuterFunction       ofunc) const
         {
             auto result = std::vector<double>{};
 
@@ -583,9 +705,10 @@ namespace Opm { namespace ECLPVT {
 
             for (auto i = 0*nVals; i < nVals; ++i) {
                 const auto q =
-                    this->evaluate(key.data[i], x.data[i], func);
+                    this->evaluate(key.data[i], x.data[i],
+                                   std::forward<InnerFunction>(ifunc));
 
-                result.push_back(q);
+                result.push_back(ofunc(q));
             }
 
             return result;

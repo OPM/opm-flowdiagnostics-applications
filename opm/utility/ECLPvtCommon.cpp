@@ -226,7 +226,7 @@ Opm::ECLPVT::PVDx::PVDx(ElemIt               xBegin,
                         ElemIt               xEnd,
                         const ConvertUnits&  convert,
                         std::vector<ElemIt>& colIt)
-    : interp_(Extrap{2}, xBegin, xEnd, colIt,
+    : interp_(Extrap{}, xBegin, xEnd, colIt,
               convert.indep, convert.column)
 {}
 

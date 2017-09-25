@@ -143,6 +143,9 @@ ConvertToSI::ConvertToSI(const ::Opm::ECLUnits::UnitSystem& usys)
         apply(Cvrt::recipFvfGasViscDerivVapOil(usys));
 }
 
+template <std::size_t N>
+using DVec = ::Opm::ECLPVT::DenseVector<N>;
+
 // =====================================================================
 
 BOOST_AUTO_TEST_SUITE (Basic_Conversion)
@@ -405,6 +408,121 @@ BOOST_AUTO_TEST_CASE (PVT_M)
     // Derivative of Reciprocal Product of FVF for Gas and Viscosity (1 /
     // (Bg*mu_g)) w.r.t. Vaporised Oil-Gas Ratio.
     BOOST_CHECK_CLOSE(scale.recipFvfGasViscDerivVapOil, 1.0e3, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_SUITE_END ()
+
+// =====================================================================
+
+BOOST_AUTO_TEST_SUITE (DenseVector)
+
+BOOST_AUTO_TEST_CASE (Construct)
+{
+    // DenseVector<1>
+    {
+        const auto x = DVec<1>{ std::array<double, 1>{ { 1.0 } } };
+
+        BOOST_CHECK_CLOSE(x.array()[0], 1.0, 1.0e-10);
+    }
+
+    // DenseVector<2>
+    {
+        const auto x = DVec<2>{ std::array<double, 2>{ { 2.0, -1.0 } } };
+
+        BOOST_CHECK_CLOSE(x.array()[0],  2.0, 1.0e-10);
+        BOOST_CHECK_CLOSE(x.array()[1], -1.0, 1.0e-10);
+    }
+}
+
+BOOST_AUTO_TEST_CASE (Addition)
+{
+    const auto x = DVec<2>{
+        std::array<double,2>{ 0.1, 2.3 }
+    };
+
+    const auto two_x = x + x;
+
+    BOOST_CHECK_CLOSE(two_x.array()[0], 0.2, 1.0e-10);
+    BOOST_CHECK_CLOSE(two_x.array()[1], 4.6, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE (Subtraction)
+{
+    const auto x = DVec<2>{
+        std::array<double,2>{ 0.1, 2.3 }
+    };
+
+    const auto y = DVec<2>{
+        std::array<double,2>{ 10.9, 8.7 }
+    };
+
+    const auto x_minus_y = x - y;
+
+    BOOST_CHECK_CLOSE(x_minus_y.array()[0], -10.8, 1.0e-10);
+    BOOST_CHECK_CLOSE(x_minus_y.array()[1], - 6.4, 1.0e-10);
+}
+
+BOOST_AUTO_TEST_CASE (Mult_By_Scalar)
+{
+    // x *= a
+    {
+        auto x = DVec<2> {
+            std::array<double,2>{ 0.1, 2.3 }
+        };
+
+        x *= 5.0;
+
+        BOOST_CHECK_CLOSE(x.array()[0],  0.5, 1.0e-10);
+        BOOST_CHECK_CLOSE(x.array()[1], 11.5, 1.0e-10);
+    }
+
+    // y <- x * a
+    {
+        const auto x = DVec<2> {
+            std::array<double,2>{ 0.1, 2.3 }
+        };
+
+        {
+            const auto y = x * 5.0;
+
+            BOOST_CHECK_CLOSE(y.array()[0],  0.5, 1.0e-10);
+            BOOST_CHECK_CLOSE(y.array()[1], 11.5, 1.0e-10);
+        }
+
+        {
+            const auto y = 2.5 * x;
+
+            BOOST_CHECK_CLOSE(y.array()[0], 0.25, 1.0e-10);
+            BOOST_CHECK_CLOSE(y.array()[1], 5.75, 1.0e-10);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE (Divide_By_Scalar)
+{
+    // x /= a
+    {
+        auto x = DVec<2> {
+            std::array<double,2>{ 0.5, 11.5 }
+        };
+
+        x /= 5.0;
+
+        BOOST_CHECK_CLOSE(x.array()[0], 0.1, 1.0e-10);
+        BOOST_CHECK_CLOSE(x.array()[1], 2.3, 1.0e-10);
+    }
+
+    // y <- x / a
+    {
+        const auto x = DVec<2> {
+            std::array<double,2>{ 0.25, 5.75 }
+        };
+
+        const auto y = x / 2.5;
+
+        BOOST_CHECK_CLOSE(y.array()[0], 0.1, 1.0e-10);
+        BOOST_CHECK_CLOSE(y.array()[1], 2.3, 1.0e-10);
+    }
 }
 
 BOOST_AUTO_TEST_SUITE_END ()
