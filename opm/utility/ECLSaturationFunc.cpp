@@ -26,15 +26,14 @@
 #include <opm/utility/ECLEndPointScaling.hpp>
 #include <opm/utility/ECLGraph.hpp>
 #include <opm/utility/ECLPropTable.hpp>
+#include <opm/utility/ECLRegionMapping.hpp>
 #include <opm/utility/ECLResultData.hpp>
-
-#include <opm/utility/graph/AssembledConnections.hpp>
-#include <opm/utility/graph/AssembledConnectionsIteration.hpp>
 
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <iterator>
 #include <string>
 #include <utility>
 
@@ -76,84 +75,22 @@ namespace {
 
         return so;
     }
+
+    std::vector<int>
+    satnumVector(const ::Opm::ECLGraph&        G,
+                 const ::Opm::ECLInitFileData& init)
+    {
+        auto satnum = G.rawLinearisedCellData<int>(init, "SATNUM");
+
+        if (satnum.empty()) {
+            // SATNUM missing in one or more of the grids managed by 'G'.
+            // Put all cells in SATNUM region 1.
+            satnum.assign(G.numCells(), 1);
+        }
+
+        return satnum;
+    }
 } // Anonymous
-
-class RegionMapping
-{
-private:
-    using Map     = ::Opm::AssembledConnections;
-    using NeighIt = Map::Neighbours::const_iterator;
-    using MapIdx  = Map::Offset;
-
-public:
-    RegionMapping(const std::size_t       numCells,
-                  const std::vector<int>& regIdx);
-
-    using NeighRng = ::Opm::SimpleIteratorRange<NeighIt>;
-
-    MapIdx numRegions() const
-    {
-        return this->map_.numRows();
-    }
-
-    NeighRng cells(const MapIdx regId) const
-    {
-        assert (regId < this->numRegions());
-
-        const auto& start = this->map_.startPointers();
-        const auto& neigh = this->map_.neighbourhood();
-
-        auto b = std::begin(neigh) + start[regId + 0];
-        auto e = std::begin(neigh) + start[regId + 1];
-
-        return { b, e };
-    }
-
-private:
-    Opm::AssembledConnections map_;
-};
-
-RegionMapping::RegionMapping(const std::size_t       numCells,
-                             const std::vector<int>& regIdx)
-{
-    if (regIdx.empty()) {
-        // No explicit region mapping.  Put all active cells in single
-        // region (region ID 0).  This is somewhat roundabout since class
-        // AssembledConnections does not have a direct way of expressing
-        // this case.
-        const auto nc = static_cast<int>(numCells);
-
-        for (auto c = 0*nc; c < nc; ++c) {
-            this->map_.addConnection(0, c);
-        }
-
-        this->map_.compress(1);
-    }
-    else if (regIdx.size() != numCells) {
-        throw std::invalid_argument {
-            "Region Array Size Does Not "
-            "Match Number of Active Cells"
-        };
-    }
-    else {
-        // Caller provided explicit region mapping for all active cells.
-        // Assume that the region IDs themselves are one-based indices
-        // (e.g., SATNUM) and adjust accordingly.
-
-        auto maxReg = -1;
-        auto c      =  0;
-
-        for (const auto& regId : regIdx) {
-            const auto regId_0based = regId - 1;
-
-            this->map_.addConnection(regId_0based, c++);
-
-            if (regId_0based > maxReg) { maxReg = regId_0based; }
-        }
-
-        this->map_.compress(maxReg + 1);
-    }
-}
 
 // =====================================================================
 
@@ -617,26 +554,26 @@ private:
             }
         }
 
-        void scaleOG(const RegionMapping& rmap,
-                     std::vector<double>& so) const
+        void scaleOG(const ECLRegionMapping& rmap,
+                     std::vector<double>&    so) const
         {
             this->scale(this->oil_in_og_, rmap, so);
         }
 
-        void scaleOW(const RegionMapping& rmap,
-                     std::vector<double>& so) const
+        void scaleOW(const ECLRegionMapping& rmap,
+                     std::vector<double>&    so) const
         {
             this->scale(this->oil_in_ow_, rmap, so);
         }
 
-        void scaleGas(const RegionMapping& rmap,
-                      std::vector<double>& sg) const
+        void scaleGas(const ECLRegionMapping& rmap,
+                      std::vector<double>&    sg) const
         {
             this->scale(this->gas_, rmap, sg);
         }
 
-        void scaleWat(const RegionMapping& rmap,
-                      std::vector<double>& sw) const
+        void scaleWat(const ECLRegionMapping& rmap,
+                      std::vector<double>&    sw) const
         {
             this->scale(this->wat_, rmap, sw);
         }
@@ -702,10 +639,12 @@ private:
         EPS gas_;
         EPS wat_;
 
-        void scale(const EPS&           eps,
-                   const RegionMapping& rmap,
-                   std::vector<double>& s) const
+        void scale(const EPS&              eps,
+                   const ECLRegionMapping& rmap,
+                   std::vector<double>&    s) const
         {
+            assert (rmap.regionSubset().size() == s.size());
+
             if (! eps.scaling) {
                 // No end-point scaling defined for this curve.  Return
                 // unchanged.
@@ -719,58 +658,52 @@ private:
                 };
             }
 
-            if (rmap.numRegions() == 1) {
-                this->scaleSingleRegion(eps, s);
-            }
-            else {
-                this->scaleMultiRegion(eps, rmap, s);
+            for (const auto& regID : rmap.activeRegions()) {
+                const auto sp =
+                    this->getSaturationPoints(rmap, regID, s);
+
+                // Assume 'regID' is a traditional ECL-style, one-based
+                // region ID (e.g., SATNUM entry).
+                const auto sr =
+                    eps.scaling->eval((*eps.tep)[regID - 1], sp);
+
+                this->assignScaledSaturations(rmap, regID, sr, s);
             }
         }
 
-        void scaleSingleRegion(const EPS& eps, std::vector<double>& s) const
+        EPSInterface::SaturationPoints
+        getSaturationPoints(const ECLRegionMapping&    rmap,
+                            const int                  regID,
+                            const std::vector<double>& s) const
         {
-            assert (eps.tep->size() == 1);
-
-            using Assoc  = EPSInterface::SaturationAssoc;
-            using CellID = decltype(std::declval<Assoc>().cell);
-
             auto sp = EPSInterface::SaturationPoints{};
 
-            sp.reserve(s.size());
-
-            auto cell = static_cast<CellID>(0);
-            for (const auto& si : s) {
-                sp.push_back(Assoc{ cell++, si });
-            }
-
-            s = eps.scaling->eval((*eps.tep)[0], sp);
-        }
-
-        void scaleMultiRegion(const EPS&           eps,
-                              const RegionMapping& rmap,
-                              std::vector<double>& s) const
-        {
-            const auto nreg = rmap.numRegions();
-
-            assert (eps.tep->size() == nreg);
-
             using Assoc  = EPSInterface::SaturationAssoc;
             using CellID = decltype(std::declval<Assoc>().cell);
 
-            for (auto reg = 0*nreg; reg < nreg; ++reg) {
-                auto sp = EPSInterface::SaturationPoints{};
+            const auto& subset = rmap.regionSubset();
+            const auto& subsetIdx = rmap.getRegionIndices(regID);
 
-                for (const auto& cell : rmap.cells(reg)) {
-                    sp.push_back(Assoc{CellID(cell), s[cell]});
-                }
+            sp.reserve(std::distance(std::begin(subsetIdx),
+                                     std::end  (subsetIdx)));
 
-                const auto& sr =
-                    eps.scaling->eval((*eps.tep)[reg], sp);
+            for (const auto& i : subsetIdx) {
+                sp.push_back(Assoc{ CellID(subset[i]), s[i] });
+            }
 
-                auto i = static_cast<decltype(sr.size())>(0);
-                for (const auto& cell : rmap.cells(reg)) {
-                    s[cell] = sr[i++];
-                }
+            return sp;
+        }
+
+        void
+        assignScaledSaturations(const ECLRegionMapping&    rmap,
+                                const int                  regID,
+                                const std::vector<double>& sr,
+                                std::vector<double>&       s) const
+        {
+            auto i = static_cast<decltype(sr.size())>(0);
+
+            for (const auto& ix : rmap.getRegionIndices(regID)) {
+                s[ix] = sr[i++];
             }
         }
 
@@ -838,10 +771,7 @@ private:
         }
     };
 
-    using RegionID =
-        decltype(std::declval<RegionMapping>().numRegions());
-
-    RegionMapping rmap_;
+    ECLRegionMapping rmap_;
 
     std::unique_ptr<Relperm::Oil::KrFunction>   oil_;
     std::unique_ptr<Relperm::Gas::KrFunction>   gas_;
@@ -874,8 +804,9 @@ private:
 
     template <typename T>
     std::vector<T>
-    gatherRegionSubset(const RegionID        reg,
-                       const std::vector<T>& x) const
+    gatherRegionSubset(const int               reg,
+                       const ECLRegionMapping& rmap,
+                       const std::vector<T>&   x) const
     {
         auto y = std::vector<T>{};
 
@@ -883,39 +814,39 @@ private:
             return y;
         }
 
-        for (const auto& cell : this->rmap_.cells(reg)) {
-            y.push_back(x[cell]);
+        for (const auto& ix : rmap.getRegionIndices(reg)) {
+            y.push_back(x[ix]);
         }
 
         return y;
     }
 
     template <typename T>
-    void scatterRegionResults(const RegionID        reg,
-                              const std::vector<T>& x_reg,
-                              std::vector<T>&       x) const
+    void scatterRegionResults(const int               reg,
+                              const ECLRegionMapping& rmap,
+                              const std::vector<T>&   x_reg,
+                              std::vector<T>&         x) const
     {
         auto i = static_cast<decltype(x_reg.size())>(0);
 
-        for (const auto& cell : this->rmap_.cells(reg)) {
-            x[cell] = x_reg[i++];
+        for (const auto& ix : rmap.getRegionIndices(reg)) {
+            x[ix] = x_reg[i++];
         }
     }
 
     template <class RegionOperation>
-    void regionLoop(RegionOperation&& regOp) const
+    void regionLoop(const ECLRegionMapping& rmap,
+                    RegionOperation&&       regOp) const
     {
-        for (auto nreg = this->rmap_.numRegions(),
-                  reg  = 0*nreg; reg < nreg; ++reg)
-        {
-            regOp(reg);
+        for (const auto& regID : rmap.activeRegions()) {
+            regOp(regID, rmap);
         }
     }
 };
 
 Opm::ECLSaturationFunc::Impl::Impl(const ECLGraph&        G,
                                    const ECLInitFileData& init)
-    : rmap_(G.numCells(), G.rawLinearisedCellData<int>(init, "SATNUM"))
+    : rmap_(satnumVector(G, init))
 {
 }
 
@@ -1094,31 +1025,35 @@ kro(const ECLGraph&       G,
     kr.resize(so_g.size(), 0.0);
 
     // Compute relative permeability per region.
-    this->regionLoop([this, &so_g, &so_w, &sg, &sw, &kr]
-        (const RegionID reg)
+    this->regionLoop(this->rmap_,
+        [this, &so_g, &so_w, &sg, &sw, &kr]
+        (const int               reg,
+         const ECLRegionMapping& rmap)
     {
         const auto So_g = Relperm::Oil::KrFunction::SOil {
-            this->gatherRegionSubset(reg, so_g)
+            this->gatherRegionSubset(reg, rmap, so_g)
         };
 
         const auto So_w = Relperm::Oil::KrFunction::SOil {
-            this->gatherRegionSubset(reg, so_w)
+            this->gatherRegionSubset(reg, rmap, so_w)
         };
 
         const auto Sg = Relperm::Oil::KrFunction::SGas {
             // Empty in case of Oil/Water system
-            this->gatherRegionSubset(reg, sg)
+            this->gatherRegionSubset(reg, rmap, sg)
         };
 
         const auto Sw = Relperm::Oil::KrFunction::SWat {
             // Empty in case of Oil/Gas system
-            this->gatherRegionSubset(reg, sw)
+            this->gatherRegionSubset(reg, rmap, sw)
         };
 
+        // Region ID 'reg' is traditional, ECL-style one-based region ID
+        // (SATNUM).  Subtract one to create valid index.
         const auto& kro_reg =
-            this->oil_->kro(reg, So_g, Sg, So_w, Sw);
+            this->oil_->kro(reg - 1, So_g, Sg, So_w, Sw);
 
-        this->scatterRegionResults(reg, kro_reg, kr);
+        this->scatterRegionResults(reg, rmap, kro_reg, kr);
     });
 
     return kr;
@@ -1147,14 +1082,19 @@ krg(const ECLGraph&       G,
     kr.resize(sg.size(), 0.0);
 
     // Compute relative permeability per region.
-    this->regionLoop([this, &sg, &kr](const RegionID reg)
+    this->regionLoop(this->rmap_,
+        [this, &sg, &kr](const int               reg,
+                         const ECLRegionMapping& rmap)
     {
-        const auto sg_reg = this->gatherRegionSubset(reg, sg);
+        const auto sg_reg =
+            this->gatherRegionSubset(reg, rmap, sg);
 
+        // Region ID 'reg' is traditional, ECL-style one-based region ID
+        // (SATNUM).  Subtract one to create valid index.
         const auto krg_reg =
-            this->gas_->krg(reg, sg_reg);
+            this->gas_->krg(reg - 1, sg_reg);
 
-        this->scatterRegionResults(reg, krg_reg, kr);
+        this->scatterRegionResults(reg, rmap, krg_reg, kr);
     });
 
     return kr;
@@ -1183,14 +1123,19 @@ krw(const ECLGraph&       G,
     kr.resize(sw.size(), 0.0);
 
     // Compute relative permeability per region.
-    this->regionLoop([this, &sw, &kr](const RegionID reg)
+    this->regionLoop(this->rmap_,
+        [this, &sw, &kr](const int               reg,
+                         const ECLRegionMapping& rmap)
     {
-        const auto sw_reg = this->gatherRegionSubset(reg, sw);
+        const auto sw_reg =
+            this->gatherRegionSubset(reg, rmap, sw);
 
+        // Region ID 'reg' is traditional, ECL-style one-based region ID
+        // (SATNUM).  Subtract one to create valid index.
         const auto krw_reg =
-            this->wat_->krw(reg, sw_reg);
+            this->wat_->krw(reg - 1, sw_reg);
 
-        this->scatterRegionResults(reg, krw_reg, kr);
+        this->scatterRegionResults(reg, rmap, krw_reg, kr);
     });
 
     return kr;
