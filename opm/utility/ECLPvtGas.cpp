@@ -19,6 +19,7 @@
 
 #include <opm/utility/ECLPvtGas.hpp>
 
+#include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLPropTable.hpp>
 #include <opm/utility/ECLPvtCommon.hpp>
 #include <opm/utility/ECLResultData.hpp>
@@ -343,7 +344,9 @@ private:
     using EvalPtr = std::unique_ptr<PVxGBase>;
 
 public:
-    Impl(const ECLPropTableRawData& raw, const int usys);
+    Impl(const ECLPropTableRawData& raw,
+         const int                  usys,
+         std::vector<double>        rhoS);
 
     Impl(const Impl& rhs);
     Impl(Impl&& rhs);
@@ -363,30 +366,43 @@ public:
               const std::vector<double>& rv,
               const std::vector<double>& pg) const;
 
+    double surfaceMassDensity(const RegIdx region) const
+    {
+        this->validateRegIdx(region);
+
+        return this->rhoS_[region];
+    }
+
 private:
     std::vector<EvalPtr> eval_;
+    std::vector<double>  rhoS_;
 
     void validateRegIdx(const RegIdx region) const;
 };
 
 Opm::ECLPVT::Gas::Impl::
 Impl(const ECLPropTableRawData& raw,
-     const int                  usys)
+     const int                  usys,
+     std::vector<double>        rhoS)
     : eval_(createPVTFunction(raw, usys))
+    , rhoS_(std::move(rhoS))
 {}
 
 Opm::ECLPVT::Gas::Impl::Impl(const Impl& rhs)
     : eval_(clone(rhs.eval_))
+    , rhoS_(rhs.rhoS_)
 {}
 
 Opm::ECLPVT::Gas::Impl::Impl(Impl&& rhs)
     : eval_(std::move(rhs.eval_))
+    , rhoS_(std::move(rhs.rhoS_))
 {}
 
 Opm::ECLPVT::Gas::Impl&
 Opm::ECLPVT::Gas::Impl::operator=(const Impl& rhs)
 {
     this->eval_ = clone(rhs.eval_);
+    this->rhoS_ = rhs.rhoS_;
 
     return *this;
 }
@@ -395,6 +411,7 @@ Opm::ECLPVT::Gas::Impl&
 Opm::ECLPVT::Gas::Impl::operator=(Impl&& rhs)
 {
     this->eval_ = std::move(rhs.eval_);
+    this->rhoS_ = std::move(rhs.rhoS_);
 
     return *this;
 }
@@ -439,8 +456,9 @@ Opm::ECLPVT::Gas::Impl::validateRegIdx(const RegIdx region) const
 // ----------------------------------------------------------------------
 
 Opm::ECLPVT::Gas::Gas(const ECLPropTableRawData& raw,
-                      const int                  usys)
-    : pImpl_(new Impl(raw, usys))
+                      const int                  usys,
+                      std::vector<double>        rhoS)
+    : pImpl_(new Impl(raw, usys, std::move(rhoS)))
 {}
 
 Opm::ECLPVT::Gas::~Gas()
@@ -486,6 +504,11 @@ viscosity(const int           region,
           const GasPressure&  pg) const
 {
     return this->pImpl_->viscosity(region, rv.data, pg.data);
+}
+
+double Opm::ECLPVT::Gas::surfaceMassDensity(const int region) const
+{
+    return this->pImpl_->surfaceMassDensity(region);
 }
 
 // =====================================================================
@@ -536,5 +559,9 @@ fromECLOutput(const ECLInitFileData& init)
         raw.data.assign(&tab[start], &tab[start] + nTabElem);
     }
 
-    return GPtr{ new Gas(raw, ih[ INTEHEAD_UNIT_INDEX ]) };
+    auto rhoS = surfaceMassDensity(init, ECLPhaseIndex::Vapour);
+
+    return GPtr{
+        new Gas(raw, ih[ INTEHEAD_UNIT_INDEX ], std::move(rhoS))
+    };
 }

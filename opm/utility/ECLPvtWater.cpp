@@ -19,6 +19,7 @@
 
 #include <opm/utility/ECLPvtWater.hpp>
 
+#include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLPropTable.hpp>
 #include <opm/utility/ECLPvtCommon.hpp>
 #include <opm/utility/ECLResultData.hpp>
@@ -88,12 +89,23 @@ public:
             });
     }
 
+    double& surfaceMassDensity()
+    {
+        return this->rhoS_;
+    }
+
+    double surfaceMassDensity() const
+    {
+        return this->rhoS_;
+    }
+
 private:
     double pw_ref_       { 1.0 };
     double recipFvf_     { 1.0 }; // 1 / B
     double recipFvfVisc_ { 1.0 }; // 1 / (B*mu)
     double Cw_           { 1.0 };
     double diffCwCv_     { 0.0 }; // Cw - Cv
+    double rhoS_         { 0.0 };
 
     double recipFvf(const double pw) const
     {
@@ -176,7 +188,9 @@ PVTCurves::PVTCurves(ElemIt               xBegin,
 class Opm::ECLPVT::Water::Impl
 {
 public:
-    Impl(const ECLPropTableRawData& raw, const int usys);
+    Impl(const ECLPropTableRawData& raw,
+         const int                  usys,
+         const std::vector<double>& rhoS);
 
     using RegIdx = std::vector<PVTCurves>::size_type;
 
@@ -198,6 +212,13 @@ public:
         return this->eval_[region].viscosity(pw);
     }
 
+    double surfaceMassDensity(const RegIdx region) const
+    {
+        this->validateRegIdx(region);
+
+        return this->eval_[region].surfaceMassDensity();
+    }
+
 private:
     std::vector<PVTCurves> eval_;
 
@@ -205,7 +226,8 @@ private:
 };
 
 Opm::ECLPVT::Water::Impl::Impl(const ECLPropTableRawData& raw,
-                               const int                  usys)
+                               const int                  usys,
+                               const std::vector<double>& rhoS)
 {
     using ElemIt = PVTCurves::ElemIt;
 
@@ -218,6 +240,12 @@ Opm::ECLPVT::Water::Impl::Impl(const ECLPropTableRawData& raw,
     {
         return PVTCurves(xBegin, xEnd, cvrt, colIt);
     });
+
+    assert (rhoS.size() == this->eval_.size());
+
+    for (auto n = this->eval_.size(), i = 0*n; i < n; ++i) {
+        this->eval_[i].surfaceMassDensity() = rhoS[i];
+    }
 }
 
 void
@@ -238,8 +266,9 @@ Opm::ECLPVT::Water::Impl::validateRegIdx(const RegIdx region) const
 // ---------------------------------------------------------------------
 
 Opm::ECLPVT::Water::Water(const ECLPropTableRawData& raw,
-                          const int                  usys)
-    : pImpl_(new Impl(raw, usys))
+                          const int                  usys,
+                          const std::vector<double>& rhoS)
+    : pImpl_(new Impl(raw, usys, rhoS))
 {}
 
 Opm::ECLPVT::Water::~Water()
@@ -283,6 +312,12 @@ Opm::ECLPVT::Water::viscosity(const int            region,
     return this->pImpl_->viscosity(region, pw.data);
 }
 
+double
+Opm::ECLPVT::Water::surfaceMassDensity(const int region) const
+{
+    return this->pImpl_->surfaceMassDensity(region);
+}
+
 // =====================================================================
 
 std::unique_ptr<Opm::ECLPVT::Water>
@@ -321,5 +356,9 @@ fromECLOutput(const ECLInitFileData& init)
         raw.data.assign(&tab[start], &tab[start] + nTabElem);
     }
 
-    return WPtr{ new Water(raw, ih[ INTEHEAD_UNIT_INDEX ]) };
+    const auto rhoS = surfaceMassDensity(init, ECLPhaseIndex::Aqua);
+
+    return WPtr{
+        new Water(raw, ih[ INTEHEAD_UNIT_INDEX ], rhoS)
+    };
 }

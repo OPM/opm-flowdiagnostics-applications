@@ -43,7 +43,13 @@ namespace Opm { namespace ECLPVT {
         /// \param[in] usys Unit system convention of the result set from
         ///    which \p raw was extracted.  Must correspond to item 3 of the
         ///    INTEHEAD keyword in the INIT file.
-        Gas(const ECLPropTableRawData& raw, const int usys);
+        ///
+        /// \param[in] rhoS Mass density of gas at surface conditions.
+        ///    Typically computed by \code ECLPVT::surfaceMassDensity()
+        ///    \endcode.
+        Gas(const ECLPropTableRawData& raw,
+            const int                  usys,
+            std::vector<double>        rhoS);
 
         /// Destructor.
         ~Gas();
@@ -134,6 +140,15 @@ namespace Opm { namespace ECLPVT {
         viscosity(const int           region,
                   const VaporizedOil& rv,
                   const GasPressure&  pg) const;
+
+        /// Retrieve constant mass density of gas at surface conditions.
+        ///
+        /// \param[in] region Region ID.  Non-negative integer typically
+        ///    derived from the PVTNUM mapping vector.
+        ///
+        /// \return Mass density of gas at surface in particular model
+        ///    region.
+        double surfaceMassDensity(const int region) const;
 
     private:
         /// Implementation class.

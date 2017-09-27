@@ -341,7 +341,9 @@ private:
     using EvalPtr = std::unique_ptr<PVxOBase>;
 
 public:
-    Impl(const ECLPropTableRawData& raw, const int usys);
+    Impl(const ECLPropTableRawData& raw,
+         const int                  usys,
+         std::vector<double>        rhoS);
 
     Impl(const Impl& rhs);
     Impl(Impl&& rhs);
@@ -361,30 +363,43 @@ public:
               const std::vector<double>& rs,
               const std::vector<double>& po) const;
 
+    double surfaceMassDensity(const RegIdx region) const
+    {
+        this->validateRegIdx(region);
+
+        return this->rhoS_[region];
+    }
+
 private:
     std::vector<EvalPtr> eval_;
+    std::vector<double>  rhoS_;
 
     void validateRegIdx(const RegIdx region) const;
 };
 
 Opm::ECLPVT::Oil::Impl::
 Impl(const ECLPropTableRawData& raw,
-     const int                  usys)
+     const int                  usys,
+     std::vector<double>        rhoS)
     : eval_(createPVTFunction(raw, usys))
+    , rhoS_(std::move(rhoS))
 {}
 
 Opm::ECLPVT::Oil::Impl::Impl(const Impl& rhs)
     : eval_(clone(rhs.eval_))
+    , rhoS_(rhs.rhoS_)
 {}
 
 Opm::ECLPVT::Oil::Impl::Impl(Impl&& rhs)
     : eval_(std::move(rhs.eval_))
+    , rhoS_(std::move(rhs.rhoS_))
 {}
 
 Opm::ECLPVT::Oil::Impl&
 Opm::ECLPVT::Oil::Impl::operator=(const Impl& rhs)
 {
     this->eval_ = clone(rhs.eval_);
+    this->rhoS_ = rhs.rhoS_;
 
     return *this;
 }
@@ -393,6 +408,7 @@ Opm::ECLPVT::Oil::Impl&
 Opm::ECLPVT::Oil::Impl::operator=(Impl&& rhs)
 {
     this->eval_ = std::move(rhs.eval_);
+    this->rhoS_ = std::move(rhs.rhoS_);
 
     return *this;
 }
@@ -437,8 +453,9 @@ Opm::ECLPVT::Oil::Impl::validateRegIdx(const RegIdx region) const
 // ----------------------------------------------------------------------
 
 Opm::ECLPVT::Oil::Oil(const ECLPropTableRawData& raw,
-                      const int                  usys)
-    : pImpl_(new Impl(raw, usys))
+                      const int                  usys,
+                      std::vector<double>        rhoS)
+    : pImpl_(new Impl(raw, usys, std::move(rhoS)))
 {}
 
 Opm::ECLPVT::Oil::~Oil()
@@ -484,6 +501,11 @@ viscosity(const int           region,
           const OilPressure&  po) const
 {
     return this->pImpl_->viscosity(region, rs.data, po.data);
+}
+
+double Opm::ECLPVT::Oil::surfaceMassDensity(const int region) const
+{
+    return this->pImpl_->surfaceMassDensity(region);
 }
 
 // =====================================================================
@@ -534,5 +556,9 @@ fromECLOutput(const ECLInitFileData& init)
         raw.data.assign(&tab[start], &tab[start] + nTabElem);
     }
 
-    return OPtr{ new Oil(raw, ih[ INTEHEAD_UNIT_INDEX ]) };
+    auto rhoS = surfaceMassDensity(init, ECLPhaseIndex::Liquid);
+
+    return OPtr{
+        new Oil(raw, ih[ INTEHEAD_UNIT_INDEX ], std::move(rhoS))
+    };
 }
