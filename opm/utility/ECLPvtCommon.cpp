@@ -19,11 +19,14 @@
 
 #include <opm/utility/ECLPvtCommon.hpp>
 
+#include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <functional>
+
+#include <ert/ecl/ecl_kw_magic.h>
 
 namespace {
     double fvfScale(const ::Opm::ECLUnits::UnitSystem& usys)
@@ -64,6 +67,13 @@ namespace {
             }
         };
     }
+}
+
+Opm::ECLPVT::ConvertUnits::Converter
+Opm::ECLPVT::CreateUnitConverter::ToSI::
+density(const ::Opm::ECLUnits::UnitSystem& usys)
+{
+    return createConverterToSI(usys.density());
 }
 
 Opm::ECLPVT::ConvertUnits::Converter
@@ -250,4 +260,52 @@ Opm::ECLPVT::PVDx::viscosity(const std::vector<double>& p) const
         // (1 / B) / (1 / (B * mu)
         return this->fvf_recip(pt) / this->fvf_mu_recip(pt);
     });
+}
+
+// =====================================================================
+
+std::vector<double>
+Opm::ECLPVT::surfaceMassDensity(const ECLInitFileData& init,
+                                const ECLPhaseIndex    phase)
+{
+    const auto col = [phase]() -> std::size_t
+    {
+        // Column order: 0 <-> oil, 1 <-> water, 2 <-> gas
+
+        switch (phase) {
+        case ECLPhaseIndex::Aqua:   return std::size_t{ 1 };
+        case ECLPhaseIndex::Liquid: return std::size_t{ 0 };
+        case ECLPhaseIndex::Vapour: return std::size_t{ 2 };
+        }
+
+        throw std::invalid_argument {
+            "Unsupported Phase ID"
+        };
+    }();
+
+    const auto& tabdims = init.keywordData<int>("TABDIMS");
+    const auto& tab     = init.keywordData<double>("TAB");
+
+    // Subtract one to account for 1-based indices.
+    const auto start = tabdims[ TABDIMS_IBDENS_OFFSET_ITEM ] - 1;
+    const auto nreg  = tabdims[ TABDIMS_NTDENS_ITEM ];
+
+    // Phase densities for 'phase' constitute 'nreg' consecutive entries
+    // of TAB, starting at an appropriate column offset from the table's
+    // 'start'.
+    auto rho = std::vector<double> {
+        &tab[ start + nreg*(col + 0) ],
+        &tab[ start + nreg*(col + 1) ]
+    };
+
+    const auto& ih = init.keywordData<int>(INTEHEAD_KW);
+    const auto u = ECLUnits::createUnitSystem(ih[ INTEHEAD_UNIT_INDEX ]);
+
+    const auto dens_scale = u->density();
+
+    for (auto& rho_i : rho) {
+        rho_i = unit::convert::from(rho_i, dens_scale);
+    }
+
+    return rho;
 }

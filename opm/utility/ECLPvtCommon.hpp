@@ -20,6 +20,7 @@
 #ifndef OPM_ECLPVTCOMMON_HEADER_INCLUDED
 #define OPM_ECLPVTCOMMON_HEADER_INCLUDED
 
+#include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLPiecewiseLinearInterpolant.hpp>
 #include <opm/utility/ECLPropTable.hpp>
 #include <opm/utility/ECLTableInterpolation1D.hpp>
@@ -40,6 +41,10 @@
 /// volume factor, viscosities &c) for oil or gas based on tabulated
 /// descriptions as represented in an ECL result set (INIT file 'TAB'
 /// vector).
+
+namespace Opm {
+    class ECLInitFileData;
+} // Opm
 
 namespace Opm { namespace ECLPVT {
 
@@ -63,6 +68,17 @@ namespace Opm { namespace ECLPVT {
         /// Convert quantities from native representations to strict SI
         /// units of measure.
         struct ToSI {
+            /// Convert quantities of type mass density (\rho) to
+            /// strict SI units of measure (i.e., to kg/m^3).
+            ///
+            /// \param[in] usys Native unit system for particular result
+            ///    set.
+            ///
+            /// \return Value transformation function affecting requisite
+            ///    unit conversion.
+            static ConvertUnits::Converter
+            density(const ::Opm::ECLUnits::UnitSystem& usys);
+
             /// Convert quantities of type pressure to strict SI units of
             /// measure (i.e., to Pascal units).
             ///
@@ -715,6 +731,14 @@ namespace Opm { namespace ECLPVT {
         }
     };
 
+    /// Extract component mass density at surface conditions.
+    ///
+    /// \param[in] init ECL result set INIT file representation.
+    ///
+    /// \param[in] phase
+    std::vector<double>
+    surfaceMassDensity(const ECLInitFileData& init,
+                       const ECLPhaseIndex    phase);
 }} // Opm::ECLPVT
 
 #endif // OPM_ECLPVTCOMMON_HEADER_INCLUDED

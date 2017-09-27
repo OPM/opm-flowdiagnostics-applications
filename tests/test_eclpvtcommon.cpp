@@ -45,6 +45,7 @@ struct ConvertToSI
 {
     explicit ConvertToSI(const ::Opm::ECLUnits::UnitSystem& usys);
 
+    double dens   { 0.0 };
     double press  { 0.0 };
     double compr  { 0.0 };
     double disgas { 0.0 };
@@ -75,6 +76,9 @@ ConvertToSI::ConvertToSI(const ::Opm::ECLUnits::UnitSystem& usys)
     {
         return cnv(1.0);
     };
+
+    // Mass density
+    this->dens = apply(Cvrt::density(usys));
 
     // Pressure
     this->press = apply(Cvrt::pressure(usys));
@@ -156,6 +160,9 @@ BOOST_AUTO_TEST_CASE (Metric)
 
     const auto scale = ConvertToSI(*usys);
 
+    // Mass density
+    BOOST_CHECK_CLOSE(scale.dens, 1.0, 1.0e-10);
+
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 1.0e5, 1.0e-10);
 
@@ -215,6 +222,9 @@ BOOST_AUTO_TEST_CASE (Field)
     const auto usys = ::Opm::ECLUnits::createUnitSystem(2);
 
     const auto scale = ConvertToSI(*usys);
+
+    // Mass density
+    BOOST_CHECK_CLOSE(scale.dens, 1.601846337396014e+01, 1.0e-10);
 
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 6.894757293168360e+03, 1.0e-10);
@@ -286,6 +296,9 @@ BOOST_AUTO_TEST_CASE (Lab)
 
     const auto scale = ConvertToSI(*usys);
 
+    // Mass density
+    BOOST_CHECK_CLOSE(scale.dens, 1.0e3, 1.0e-10);
+
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 101.325e3, 1.0e-10);
 
@@ -351,6 +364,9 @@ BOOST_AUTO_TEST_CASE (PVT_M)
     const auto usys = ::Opm::ECLUnits::createUnitSystem(4);
 
     const auto scale = ConvertToSI(*usys);
+
+    // Mass density
+    BOOST_CHECK_CLOSE(scale.dens, 1.0, 1.0e-10);
 
     // Pressure
     BOOST_CHECK_CLOSE(scale.press, 101.325e3, 1.0e-10);
