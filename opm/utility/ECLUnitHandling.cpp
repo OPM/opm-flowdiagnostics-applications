@@ -42,6 +42,16 @@ namespace Opm { namespace ECLUnits {
         class USys<ECL_METRIC_UNITS> : public ::Opm::ECLUnits::UnitSystem
         {
         public:
+            virtual double density() const override
+            {
+                return Metric::Density;
+            }
+
+            virtual double depth() const override
+            {
+                return Metric::Length;
+            }
+
             virtual double pressure() const override
             {
                 return Metric::Pressure;
@@ -87,6 +97,16 @@ namespace Opm { namespace ECLUnits {
         class USys<ECL_FIELD_UNITS> : public ::Opm::ECLUnits::UnitSystem
         {
         public:
+            virtual double density() const override
+            {
+                return Field::Density;
+            }
+
+            virtual double depth() const override
+            {
+                return Field::Length;
+            }
+
             virtual double pressure() const override
             {
                 return Field::Pressure;
@@ -132,6 +152,16 @@ namespace Opm { namespace ECLUnits {
         class USys<ECL_LAB_UNITS> : public ::Opm::ECLUnits::UnitSystem
         {
         public:
+            virtual double density() const override
+            {
+                return Lab::Density;
+            }
+
+            virtual double depth() const override
+            {
+                return Lab::Length;
+            }
+
             virtual double pressure() const override
             {
                 return Lab::Pressure;
@@ -177,6 +207,19 @@ namespace Opm { namespace ECLUnits {
         class USys<ECL_PVT_M_UNITS> : public ::Opm::ECLUnits::UnitSystem
         {
         public:
+            virtual double density() const override
+            {
+                using namespace prefix;
+                using namespace unit;
+
+                return kilogram / cubic(meter);
+            }
+
+            virtual double depth() const override
+            {
+                return unit::meter;
+            }
+
             virtual double pressure() const override
             {
                 return unit::atm;
@@ -241,6 +284,18 @@ Opm::ECLUnits::Impl::getUnitConvention(const int usys)
 
     throw std::runtime_error("Unsupported Unit Convention: "
                              + std::to_string(usys));
+}
+
+double Opm::ECLUnits::UnitSystem::dissolvedGasOilRat() const
+{
+    return this->surfaceVolumeGas()
+        /  this->surfaceVolumeLiquid();
+}
+
+double Opm::ECLUnits::UnitSystem::vaporisedOilGasRat() const
+{
+    return this->surfaceVolumeLiquid()
+        /  this->surfaceVolumeGas();
 }
 
 std::unique_ptr<const ::Opm::ECLUnits::UnitSystem>
