@@ -32,27 +32,6 @@
 namespace {
     using StartSets = std::vector< ::Opm::FlowDiagnostics::CellSet>;
 
-    template <class WellData>
-    std::vector<int>
-    activeCompletions(const ::Opm::ECLGraph& G,
-                      const WellData&        well)
-    {
-        auto completion_cells = std::vector<int>{};
-
-        completion_cells.reserve(well.completions.size());
-
-        for (const auto& completion : well.completions) {
-            const auto cell_index =
-                G.activeCell(completion.ijk, completion.gridName);
-
-            if (cell_index >= 0) {
-                completion_cells.push_back(cell_index);
-            }
-        }
-
-        return completion_cells;
-    }
-
     template <class Select>
     StartSets
     getStartPointsFromWells(const example::Setup& setup,
@@ -61,9 +40,18 @@ namespace {
         auto start = StartSets{};
 
         for (const auto& well : setup.well_fluxes) {
-            if (pick(well)) {
+            std::vector<int> completion_cells;
+            for (const auto& completion : well.completions) {
+                if (pick(completion)) {
+                    const int cell_index = setup.graph.activeCell(completion.ijk, completion.gridName);
+                    if (cell_index >= 0) {
+                        completion_cells.push_back(cell_index);
+                    }
+                }
+            }
+            if (!completion_cells.empty()) {
                 start.emplace_back(Opm::FlowDiagnostics::CellSetID(well.name),
-                                   activeCompletions(setup.graph, well));
+                                   completion_cells);
             }
         }
 
@@ -72,20 +60,18 @@ namespace {
 
     StartSets injectors(const example::Setup& setup)
     {
-        using WData =
-            std::decay<decltype(setup.well_fluxes[0])>::type;
+        using Completion = Opm::ECLWellSolution::WellData::Completion;
 
-        return getStartPointsFromWells(setup, [](const WData& well)
-                                       { return well.is_injector_well; });
+        return getStartPointsFromWells(setup, [](const Completion& completion)
+                                       { return completion.reservoir_inflow_rate > 0.0; });
     }
 
     StartSets producers(const example::Setup& setup)
     {
-        using WData =
-            std::decay<decltype(setup.well_fluxes[0])>::type;
+        using Completion = Opm::ECLWellSolution::WellData::Completion;
 
-        return getStartPointsFromWells(setup, [](const WData& well)
-                                       { return ! well.is_injector_well; });
+        return getStartPointsFromWells(setup, [](const Completion& completion)
+                                       { return completion.reservoir_inflow_rate < 0.0; });
     }
 
     void printSolution(const ::Opm::FlowDiagnostics::CellSetValues& x,
@@ -135,7 +121,8 @@ namespace {
     }
 
     void runAnalysis(const StartSets&                        start,
-                     const ::Opm::FlowDiagnostics::Solution& sol)
+                     const ::Opm::FlowDiagnostics::Solution& sol,
+                     const bool                              is_inj)
     {
         auto ok = std::vector<bool>{};
         ok.reserve(start.size());
@@ -146,8 +133,9 @@ namespace {
             const auto& tof  = sol.timeOfFlight (id);
             const auto& conc = sol.concentration(id);
 
-            printSolution(tof , id, "tof" );
-            printSolution(conc, id, "conc");
+            const std::string injprod = is_inj ? "inj" : "prod";
+            printSolution(tof , id, "tof-"  + injprod);
+            printSolution(conc, id, "conc-" + injprod);
 
             if (! sameReachability(tof, conc)) {
                 std::cout << id.to_string() << ": FAIL\n";
@@ -167,14 +155,14 @@ try {
         const auto inj = injectors(setup);
         const auto fwd = fdTool.computeInjectionDiagnostics(inj);
 
-        runAnalysis(inj, fwd.fd);
+        runAnalysis(inj, fwd.fd, true);
     }
 
     {
         const auto prod = producers(setup);
         const auto rev  = fdTool.computeProductionDiagnostics(prod);
 
-        runAnalysis(prod, rev.fd);
+        runAnalysis(prod, rev.fd, false);
     }
 }
 catch (const std::exception& e) {
