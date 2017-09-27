@@ -123,26 +123,22 @@ namespace example {
                      const bool                  useEPS)
     {
         if (compute_fluxes) {
-            auto satfunc = ::Opm::ECLSaturationFunc(G, init, useEPS);
+            const auto grav = 0.0;
 
-            Opm::ECLFluxCalc calc(G, std::move(satfunc));
+            Opm::ECLFluxCalc calc(G, init, grav, useEPS);
 
-            auto getFlux = [&calc, &rstrt]
-                (const Opm::ECLPhaseIndex         p)
+            return extractFluxField(G, [&calc, &rstrt]
+                (const Opm::ECLPhaseIndex p)
             {
                 return calc.flux(rstrt, p);
-            };
-
-            return extractFluxField(G, getFlux);
+            });
         }
 
-        auto getFlux = [&G, &rstrt]
-            (const Opm::ECLPhaseIndex         p)
+        return extractFluxField(G, [&G, &rstrt]
+            (const Opm::ECLPhaseIndex p)
         {
             return G.flux(rstrt, p);
-        };
-
-        return extractFluxField(G, getFlux);
+        });
     }
 
     template <class WellFluxes>
