@@ -30,31 +30,45 @@
 #include <type_traits>
 
 namespace {
+
     using StartSets = std::vector< ::Opm::FlowDiagnostics::CellSet>;
 
-    template <class Select>
-    StartSets
-    getStartPointsFromWells(const example::Setup& setup,
-                            Select&&              pick)
+    /// Return completion cells of single well that both satisfy the
+    /// select_completion criterion and are active cells.
+    template <class WellData, class SelectCompletion>
+    std::vector<int>
+    activeCompletions(const Opm::ECLGraph& graph,
+                      const WellData&      well,
+                      SelectCompletion&&   select_completion)
     {
-        auto start = StartSets{};
-
-        for (const auto& well : setup.well_fluxes) {
-            std::vector<int> completion_cells;
-            for (const auto& completion : well.completions) {
-                if (pick(completion)) {
-                    const int cell_index = setup.graph.activeCell(completion.ijk, completion.gridName);
-                    if (cell_index >= 0) {
-                        completion_cells.push_back(cell_index);
-                    }
+        std::vector<int> completion_cells;
+        completion_cells.reserve(well.completions.size());
+        for (const auto& completion : well.completions) {
+            if (select_completion(completion)) {
+                const int cell_index = graph.activeCell(completion.ijk, completion.gridName);
+                if (cell_index >= 0) {
+                    completion_cells.push_back(cell_index);
                 }
             }
+        }
+        return completion_cells;
+    }
+
+    /// Return (active-cell) completions from all wells that satisfy
+    /// the select_completion criterion, grouped by well.
+    template <class SelectCompletion>
+    StartSets
+    getCompletionsFromWells(const example::Setup& setup,
+                            SelectCompletion&&    select_completion)
+    {
+        auto start = StartSets{};
+        for (const auto& well : setup.well_fluxes) {
+            std::vector<int> completion_cells = activeCompletions(setup.graph, well, select_completion);
             if (!completion_cells.empty()) {
                 start.emplace_back(Opm::FlowDiagnostics::CellSetID(well.name),
                                    completion_cells);
             }
         }
-
         return start;
     }
 
@@ -62,7 +76,7 @@ namespace {
     {
         using Completion = Opm::ECLWellSolution::WellData::Completion;
 
-        return getStartPointsFromWells(setup, [](const Completion& completion)
+        return getCompletionsFromWells(setup, [](const Completion& completion)
                                        { return completion.reservoir_inflow_rate > 0.0; });
     }
 
@@ -70,7 +84,7 @@ namespace {
     {
         using Completion = Opm::ECLWellSolution::WellData::Completion;
 
-        return getStartPointsFromWells(setup, [](const Completion& completion)
+        return getCompletionsFromWells(setup, [](const Completion& completion)
                                        { return completion.reservoir_inflow_rate < 0.0; });
     }
 
