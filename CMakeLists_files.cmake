@@ -21,6 +21,7 @@
 #                             the library needs it.
 
 list (APPEND MAIN_SOURCE_FILES
+        opm/utility/ECLCaseUtilities.cpp
         opm/utility/ECLEndPointScaling.cpp
         opm/utility/ECLFluxCalc.cpp
         opm/utility/ECLGraph.cpp
@@ -58,6 +59,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         )
 
 list (APPEND PUBLIC_HEADER_FILES
+        opm/utility/ECLCaseUtilities.hpp
         opm/utility/ECLEndPointScaling.hpp
         opm/utility/ECLFluxCalc.hpp
         opm/utility/ECLGraph.hpp
