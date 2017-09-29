@@ -206,6 +206,28 @@ Opm::SatFuncInterpolant::SingleTable::maximumSat() const
     return this->x_.back();
 }
 
+std::vector<double>
+Opm::SatFuncInterpolant::SingleTable::abcissa() const
+{
+    return this->x_;
+}
+
+std::vector<double>
+Opm::SatFuncInterpolant::SingleTable::ordinate(const ECLPropTableRawData::SizeType nCols,
+                                               const ResultColumn& c) const
+{
+    assert (c.i < nCols);
+
+    // Recall: 'y_' stored with column index cycling the most rapidly (row
+    // major ordering).
+    const int nRows = this->y_.size() / nCols;
+    std::vector<double> ord(nRows);
+    for (int row = 0; row < nRows; ++row) {
+        ord[row] = this->y_[row*nCols + c.i];
+    }
+    return ord;
+}
+
 // =====================================================================
 
 Opm::SatFuncInterpolant::SatFuncInterpolant(const ECLPropTableRawData& raw)
@@ -302,4 +324,24 @@ Opm::SatFuncInterpolant::maximumSat() const
     }
 
     return smax;
+}
+
+std::pair<std::vector<double>, std::vector<double>>
+Opm::SatFuncInterpolant::rawTableData(const InTable& t,
+                                      const ResultColumn& c) const
+{
+    if (t.i >= this->table_.size()) {
+        throw std::invalid_argument {
+            "Invalid Table ID"
+        };
+    }
+
+    if (c.i >= this->nResCols_) {
+        throw std::invalid_argument {
+            "Invalid Result Column ID"
+        };
+    }
+
+    return { this->table_[t.i].abcissa(),
+             this->table_[t.i].ordinate(nResCols_, c) };
 }

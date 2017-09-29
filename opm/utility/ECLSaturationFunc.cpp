@@ -109,8 +109,18 @@ public:
         return { b, e };
     }
 
+    int regionID(const int cell) const
+    {
+        if (regIdx_.empty()) {
+            return 0;
+        } else {
+            return regIdx_[cell];
+        }
+    }
+
 private:
     Opm::AssembledConnections map_;
+    std::vector<int> regIdx_;
 };
 
 RegionMapping::RegionMapping(const std::size_t       numCells,
@@ -128,6 +138,9 @@ RegionMapping::RegionMapping(const std::size_t       numCells,
         }
 
         this->map_.compress(1);
+
+        // Region index array is left empty in this case.
+        // See implementation of regionID() for handling.
     }
     else if (regIdx.size() != numCells) {
         throw std::invalid_argument {
@@ -152,6 +165,13 @@ RegionMapping::RegionMapping(const std::size_t       numCells,
         }
 
         this->map_.compress(maxReg + 1);
+
+        // Copy region index array, but again remember to adjust one-based
+        // SATNUM indices.
+        this->regIdx_ = regIdx;
+        for (int& r : this->regIdx_) {
+            --r;
+        }
     }
 }
 
@@ -472,6 +492,12 @@ namespace Relperm {
                 return this->func_.interpolate(t, c, sw);
             }
 
+            std::pair<std::vector<double>, std::vector<double>>
+            rawKrTable(const std::size_t regID) const
+            {
+                return func_.rawTableData(table(regID), krcol());
+            }
+
         private:
             ::Opm::SatFuncInterpolant func_;
 
@@ -572,6 +598,10 @@ public:
     relperm(const ECLGraph&             G,
             const ECLRestartData&       rstrt,
             const ECLPhaseIndex         p) const;
+
+    using SatFuncTable = std::pair<std::vector<double>, std::vector<double>>;
+
+    SatFuncTable waterSatFunc(const int cell) const;
 
 private:
     class EPSEvaluator
@@ -1224,6 +1254,20 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const
     return ep;
 }
 
+auto
+Opm::ECLSaturationFunc::Impl::
+waterSatFunc(const int cell) const -> SatFuncTable
+{
+    const int regionID = rmap_.regionID(cell);
+    auto table = wat_->rawKrTable(regionID);
+    if (this->eps_) {
+        // TODO: handle end-point scaling.
+        // Should both s and kr be scaled?
+    }
+    return table;
+}
+
+
 // =====================================================================
 
 Opm::ECLSaturationFunc::
@@ -1269,4 +1313,11 @@ relperm(const ECLGraph&       G,
         const ECLPhaseIndex   p) const
 {
     return this->pImpl_->relperm(G, rstrt, p);
+}
+
+auto
+Opm::ECLSaturationFunc::
+waterSatFunc(const int cell) const -> SatFuncTable
+{
+    return this->pImpl_->waterSatFunc(cell);
 }
