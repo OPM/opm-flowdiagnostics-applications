@@ -250,13 +250,8 @@ namespace {
                 ///    values of \p kw.
                 void operator()(const ecl_kw_type* kw, EType* x) const
                 {
-                    // 1) Extract raw 'int' values.
-                    ecl_kw_get_memcpy_int_data(kw, x);
-
-                    // 2) Convert to 'bool'-like values by comparing to
-                    //    magic constant ECL_BOOL_TRUE_INT (ecl_util.h).
                     for (auto n = ecl_kw_get_size(kw), i = 0*n; i < n; ++i) {
-                        x[i] = static_cast<EType>(x[i] == ECL_BOOL_TRUE_INT);
+                        x[i] = ecl_kw_iget_bool(kw, i);
                     }
                 }
             };
