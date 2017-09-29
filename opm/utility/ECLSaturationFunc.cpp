@@ -368,10 +368,13 @@ namespace Relperm {
                 kro.reserve(sw.data.size());
 
                 for (auto n = sw.data.size(), i = 0*n; i < n; ++i) {
-                    const auto den = sg.data[i] + sw.data[i] - swco;
+                    const auto Sw_corr =
+                        std::max(sw.data[i] - swco, 1.0e-6);
+
+                    const auto den = sg.data[i] + Sw_corr;
 
                     const auto xg = sg.data[i] / den;
-                    const auto xw = (sw.data[i] + swco) / den;
+                    const auto xw = Sw_corr    / den;
 
                     kro.push_back(xg*kr_og[i] + xw*kr_ow[i]);
                 }
