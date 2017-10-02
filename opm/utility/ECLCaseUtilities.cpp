@@ -94,7 +94,7 @@ namespace {
             return casefile;
         }
 
-        return casefile.parent_path() / (casefile.stem() + ".Ignore-This");
+        return casefile.parent_path() / (casefile.stem() + ".Imp-Detail-Hack");
     }
 
     // Look for separate restart files (.X000n or .F000n) that match the
