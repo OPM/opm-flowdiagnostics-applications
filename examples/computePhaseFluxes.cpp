@@ -96,15 +96,16 @@ namespace {
         }
     }
 
-    void savePhaseFlux(const std::string&         phase,
-                       const std::string&         type,
-                       const int                  step,
-                       const int                  ndgt,
-                       const std::vector<double>& pflux)
+    void savePhaseVector(const std::string&         quant,
+                         const std::string&         phase,
+                         const std::string&         type,
+                         const int                  step,
+                         const int                  ndgt,
+                         const std::vector<double>& pflux)
     {
         namespace fs = boost::filesystem;
 
-        const auto dir = fs::path{ phase };
+        const auto dir = fs::path{ quant } / phase;
 
         boost::system::error_code ec{};
         if (fs::create_directories(dir, ec) ||
@@ -130,6 +131,21 @@ namespace {
                     os << qi << '\n';
                 }
             }
+        }
+    }
+
+    void saveNeighbours(const ::Opm::ECLGraph& G)
+    {
+        std::ofstream os("neigh.txt");
+
+        if (!os) { return; }
+
+        const auto& neigh = G.neighbours();
+
+        for (auto nconn = neigh.size() / 2,
+                  conn  = 0*nconn; conn < nconn; ++conn)
+        {
+            os << neigh[2*conn + 0 ] << ' ' << neigh[2*conn + 1] << '\n';
         }
     }
 
@@ -160,13 +176,13 @@ namespace {
             });
 
             if (! pflux.empty()) {
-                savePhaseFlux(pname, "calc", step, ndgt, pflux);
+                savePhaseVector("flux", pname, "calc", step, ndgt, pflux);
             }
 
             // Extract reference fluxes if available.
             pflux = G.flux(*rstrt, phase);
             if (! pflux.empty()) {
-                savePhaseFlux(pname, "ref", step, ndgt, pflux);
+                savePhaseVector("flux", pname, "ref", step, ndgt, pflux);
             }
         }
     }
@@ -184,6 +200,10 @@ try {
     const auto init  = Opm::ECLInitFileData(rset.initFile());
     const auto graph = Opm::ECLGraph::load(rset.gridFile(), init);
     const auto fcalc = Opm::ECLFluxCalc(graph, init, grav, useEPS);
+
+    if (prm.getDefault("emitNeigh", false)) {
+        saveNeighbours(graph);
+    }
 
     auto rstrt = std::unique_ptr<Opm::ECLRestartData>{};
 
