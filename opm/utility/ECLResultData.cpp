@@ -1366,7 +1366,7 @@ namespace Opm {
         this->setActiveBlock(kwloc.sectID);
 
         if (! gridName.empty()) {
-            // We're cons
+            // Local grid.  Further restrict view to relevant LGR section.
             this->activeBlock_ =
                 ecl_file_view_add_blockview(this->activeBlock_, LGR_KW,
                                             kwloc.gridSectID);
