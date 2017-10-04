@@ -25,9 +25,14 @@ list (APPEND MAIN_SOURCE_FILES
         opm/utility/ECLFluxCalc.cpp
         opm/utility/ECLGraph.cpp
         opm/utility/ECLPropTable.cpp
+        opm/utility/ECLPvtCommon.cpp
+        opm/utility/ECLPvtGas.cpp
+        opm/utility/ECLPvtOil.cpp
+        opm/utility/ECLPvtWater.cpp
         opm/utility/ECLRegionMapping.cpp
         opm/utility/ECLResultData.cpp
         opm/utility/ECLSaturationFunc.cpp
+        opm/utility/ECLTableInterpolation1D.cpp
         opm/utility/ECLUnitHandling.cpp
         opm/utility/ECLWellSolution.cpp
         )
@@ -35,7 +40,9 @@ list (APPEND MAIN_SOURCE_FILES
 list (APPEND TEST_SOURCE_FILES
         tests/test_eclendpointscaling.cpp
         tests/test_eclproptable.cpp
+        tests/test_eclpvtcommon.cpp
         tests/test_eclregionmapping.cpp
+        tests/test_eclsimple1dinterpolant.cpp
         tests/test_eclunithandling.cpp
         )
 
@@ -55,10 +62,16 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLFluxCalc.hpp
         opm/utility/ECLGraph.hpp
         opm/utility/ECLPhaseIndex.hpp
+        opm/utility/ECLPiecewiseLinearInterpolant.hpp
         opm/utility/ECLPropTable.hpp
+        opm/utility/ECLPvtCommon.hpp
+        opm/utility/ECLPvtGas.hpp
+        opm/utility/ECLPvtOil.hpp
+        opm/utility/ECLPvtWater.hpp
         opm/utility/ECLRegionMapping.hpp
         opm/utility/ECLResultData.hpp
         opm/utility/ECLSaturationFunc.hpp
+        opm/utility/ECLTableInterpolation1D.hpp
         opm/utility/ECLUnitHandling.hpp
         opm/utility/ECLWellSolution.hpp
         )
