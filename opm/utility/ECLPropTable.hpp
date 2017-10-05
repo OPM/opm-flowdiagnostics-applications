@@ -226,6 +226,15 @@ namespace Opm {
         /// Retrieve maximum saturation in all tables.
         std::vector<double> maximumSat() const;
 
+        /// Retrieve unscaled sample points of independent variable in
+        /// particular sub-table (saturation region).
+        ///
+        /// \param[in] t ID of sub-table of interpolant.
+        ///
+        /// \return Abscissas of tabulated saturation function corresponding
+        ///    to particular saturation region.
+        const std::vector<double>& saturationPoints(const InTable& t) const;
+
     private:
         /// Single tabulated 1D interpolant.
         class SingleTable
@@ -279,6 +288,9 @@ namespace Opm {
 
             /// Retrieve maximum saturation in table.
             double maximumSat() const;
+
+            /// Retrieve unscaled sample points of independent variable.
+            const std::vector<double>& saturationPoints() const;
 
         private:
             /// Extrapolation policy for property evaluator/interpolant.
