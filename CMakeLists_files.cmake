@@ -54,6 +54,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         examples/computeToFandTracers.cpp
         examples/computeTracers.cpp
         examples/extractFromRestart.cpp
+        examples/extractPropCurves.cpp
         tests/runAcceptanceTest.cpp
         tests/runLinearisedCellDataTest.cpp
         tests/runTransTest.cpp
