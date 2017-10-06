@@ -26,19 +26,61 @@
 
 namespace Opm { namespace ECLCaseUtilities {
 
+    /// Basic information about an ECL result set.
     class ResultSet
     {
     public:
         using Path = boost::filesystem::path;
 
+        /// Constructor.
+        ///
+        /// \param[in] casename File name prefix or full path to one of a
+        ///    result set's common representative files.  Usually one of the
+        ///    '.DATA', '.EGRID' (or .GRID) or .UNRST files.
         explicit ResultSet(const Path& casename);
 
+        /// Retrieve name of result set's grid file.
         Path gridFile() const;
+
+        /// Retrieve name of result set's init file.
         Path initFile() const;
+
+        /// Retrieve name of result set's restart file corresponding to a
+        /// particular report/restart step ID.
+        ///
+        /// \param[in] reportStepID Numeric report (restart) step
+        ///    identifier.  Must be non-negative.  Typically one of the IDs
+        ///    produced by member function reportStepIDs().
+        ///
+        /// \return name of result set's restart file corresponding to \p
+        ///    reportStepID.
         Path restartFile(const int reportStepID) const;
 
+        /// Predicate for whether or not this particular result set uses a
+        /// unified restart file.
+        ///
+        /// If this function returns true, then all calls to function
+        /// restartFile() will return the same file name.  In other words,
+        /// the restart file need not be reopened when switching from one
+        /// report step to another.
+        ///
+        /// \return Whether or not this result set uses a unified restart
+        ///    file.
         bool isUnifiedRestart() const;
 
+        /// Retrieve set of report step IDs stored in result set.
+        ///
+        /// Starts at zero (i.e., \code reportStepIDs()[0] == 0 \endcode) if
+        /// the run is configured to output the initial solution state.
+        /// Otherwise, typically starts at one.  Uses the restart
+        /// specification (RSSPEC) file to identify the stored report steps.
+        ///
+        /// Note: Report step IDs will be increasing, but need not be
+        /// contiguous.  Non-contiguous IDs arise when the simulation run
+        /// does not store all of its report/restart steps (Mnemonics
+        /// 'BASIC' and 'FREQ' of input keyword RPTRST).
+        ///
+        /// \return Sequence of increasing report step IDs.
         std::vector<int> reportStepIDs() const;
 
     private:
