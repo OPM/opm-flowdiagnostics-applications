@@ -22,6 +22,8 @@
 
 #include <opm/utility/ECLCaseUtilities.hpp>
 #include <opm/utility/ECLPhaseIndex.hpp>
+#include <opm/utility/ECLPvtCommon.hpp>
+#include <opm/utility/ECLPvtCurveCollection.hpp>
 #include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLSaturationFunc.hpp>
 
@@ -56,6 +58,9 @@ namespace {
         os.setf(oflags);
         os.precision(oprec);
     }
+
+    // -----------------------------------------------------------------
+    // Relative permeability
 
     void krg(const Opm::ECLSaturationFunc& sfunc,
              const int                     activeCell,
@@ -144,6 +149,53 @@ namespace {
 
         printGraph(std::cout, "krw", graph[0]);
     }
+
+    // -----------------------------------------------------------------
+    // PVT Curves
+
+    void Bg(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+            const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::FVF, Opm::ECLPhaseIndex::Vapour, activeCell);
+
+        printGraph(std::cout, "Bg", graph);
+    }
+
+    void mu_g(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+              const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::Viscosity, Opm::ECLPhaseIndex::Vapour, activeCell);
+
+        printGraph(std::cout, "mu_g", graph);
+    }
+
+    void Bo(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+            const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::FVF, Opm::ECLPhaseIndex::Liquid, activeCell);
+
+        printGraph(std::cout, "Bo", graph);
+    }
+
+    void mu_o(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+              const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::Viscosity, Opm::ECLPhaseIndex::Liquid, activeCell);
+
+        printGraph(std::cout, "mu_o", graph);
+    }
 } // namespace Anonymous
 
 int main(int argc, char* argv[])
@@ -156,11 +208,23 @@ try {
     const auto init  = Opm::ECLInitFileData(rset.initFile());
     const auto graph = Opm::ECLGraph::load(rset.gridFile(), init);
     const auto sfunc = Opm::ECLSaturationFunc(graph, init, useEPS);
+    const auto pvtCC = Opm::ECLPVT::ECLPvtCurveCollection(graph, init);
+
+    // -----------------------------------------------------------------
+    // Relative permeability
 
     if (prm.getDefault("krg" , false)) { krg (sfunc, cellID, useEPS); }
     if (prm.getDefault("krog", false)) { krog(sfunc, cellID, useEPS); }
     if (prm.getDefault("krow", false)) { krow(sfunc, cellID, useEPS); }
     if (prm.getDefault("krw" , false)) { krw (sfunc, cellID, useEPS); }
+
+    // -----------------------------------------------------------------
+    // PVT Curves
+
+    if (prm.getDefault("Bg"  , false)) { Bg  (pvtCC, cellID); }
+    if (prm.getDefault("mu_g", false)) { mu_g(pvtCC, cellID); }
+    if (prm.getDefault("Bo"  , false)) { Bo  (pvtCC, cellID); }
+    if (prm.getDefault("mu_o", false)) { mu_o(pvtCC, cellID); }
 }
 catch (const std::exception& e) {
     std::cerr << "Caught Exception: " << e.what() << '\n';
