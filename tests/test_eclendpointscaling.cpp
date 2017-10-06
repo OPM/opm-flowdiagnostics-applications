@@ -121,7 +121,7 @@ BOOST_AUTO_TEST_CASE (NoScaling)
     // Tabulated saturation -> Input saturation
     {
         const auto sp    = associate(expect);
-        const auto s_inp = eps.eval(tep, sp);
+        const auto s_inp = eps.reverse(tep, sp);
 
         check_is_close(s_inp, s);
     }
