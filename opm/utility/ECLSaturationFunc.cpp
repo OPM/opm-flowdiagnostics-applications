@@ -36,6 +36,7 @@
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <iterator>
 #include <string>
 #include <utility>
@@ -143,6 +144,12 @@ namespace Relperm {
                 return this->func_.interpolate(t, c, sg);
             }
 
+            const std::vector<double>&
+            saturationPoints(const std::size_t regID) const
+            {
+                return this->func_.saturationPoints(this->table(regID));
+            }
+
         private:
             ::Opm::SatFuncInterpolant func_;
 
@@ -223,6 +230,30 @@ namespace Relperm {
                 const SWat&       sw) const
             {
                 return this->kroImpl(regID, so_g, sg, so_w, sw);
+            }
+
+            std::vector<double>
+            kro(const std::size_t                                 regID,
+                const SOil&                                       so,
+                const Opm::ECLSaturationFunc::RawCurve::SubSystem subsys) const
+            {
+                using SSys = Opm::ECLSaturationFunc::RawCurve::SubSystem;
+
+                if (subsys == SSys::OilGas) {
+                    return this->krog(regID, so.data);
+                }
+                else if (subsys == SSys::OilWater) {
+                    return this->krow(regID, so.data);
+                }
+
+                // Invalid request (no such sub-system).  Return empty.
+                return {};
+            }
+
+            const std::vector<double>&
+            saturationPoints(const std::size_t regID) const
+            {
+                return this->func_.saturationPoints(this->table(regID));
             }
 
             virtual std::unique_ptr<KrFunction> clone() const = 0;
@@ -429,6 +460,12 @@ namespace Relperm {
                 return this->func_.interpolate(t, c, sw);
             }
 
+            const std::vector<double>&
+            saturationPoints(const std::size_t regID) const
+            {
+                return this->func_.saturationPoints(this->table(regID));
+            }
+
         private:
             ::Opm::SatFuncInterpolant func_;
 
@@ -601,6 +638,11 @@ public:
             const ECLRestartData&       rstrt,
             const ECLPhaseIndex         p) const;
 
+    std::vector<FlowDiagnostics::Graph>
+    getSatFuncCurve(const std::vector<RawCurve>& func,
+                    const int                    activeCell,
+                    const bool                   useEPS) const;
+
 private:
     class EPSEvaluator
     {
@@ -667,6 +709,30 @@ private:
                       std::vector<double>&    sw) const
         {
             this->scale(this->wat_, rmap, sw);
+        }
+
+        void reverseScaleOG(const ECLRegionMapping& rmap,
+                            std::vector<double>&    so) const
+        {
+            this->reverseScale(this->oil_in_og_, rmap, so);
+        }
+
+        void reverseScaleOW(const ECLRegionMapping& rmap,
+                            std::vector<double>&    so) const
+        {
+            this->reverseScale(this->oil_in_ow_, rmap, so);
+        }
+
+        void reverseScaleGas(const ECLRegionMapping& rmap,
+                             std::vector<double>&    sg) const
+        {
+            this->reverseScale(this->gas_, rmap, sg);
+        }
+
+        void reverseScaleWat(const ECLRegionMapping& rmap,
+                             std::vector<double>&    sw) const
+        {
+            this->reverseScale(this->wat_, rmap, sw);
         }
 
     private:
@@ -757,6 +823,38 @@ private:
                 // region ID (e.g., SATNUM entry).
                 const auto sr =
                     eps.scaling->eval((*eps.tep)[regID - 1], sp);
+
+                this->assignScaledSaturations(rmap, regID, sr, s);
+            }
+        }
+
+        void reverseScale(const EPS&              eps,
+                          const ECLRegionMapping& rmap,
+                          std::vector<double>&    s) const
+        {
+            assert (rmap.regionSubset().size() == s.size());
+
+            if (! eps.scaling) {
+                // No end-point scaling defined for this curve.  Return
+                // unchanged.
+                return;
+            }
+
+            if (! eps.tep) {
+                throw std::logic_error {
+                    "Cannot Perform EPS in Absence of "
+                    "Table End-Point Data"
+                };
+            }
+
+            for (const auto& regID : rmap.activeRegions()) {
+                const auto sp =
+                    this->getSaturationPoints(rmap, regID, s);
+
+                // Assume 'regID' is a traditional ECL-style, one-based
+                // region ID (e.g., SATNUM entry).
+                const auto sr =
+                    eps.scaling->reverse((*eps.tep)[regID - 1], sp);
 
                 this->assignScaledSaturations(rmap, regID, sr, s);
             }
@@ -862,6 +960,8 @@ private:
         }
     };
 
+    std::vector<int> satnum_;
+
     ECLRegionMapping rmap_;
 
     std::unique_ptr<Relperm::Oil::KrFunction>   oil_;
@@ -881,15 +981,52 @@ private:
 
     std::vector<double>
     kro(const ECLGraph&       G,
-        const ECLRestartData& rstrt) const;
+        const ECLRestartData& rstrt,
+        const bool            useEPS = true) const;
+
+    FlowDiagnostics::Graph
+    kroCurve(const ECLRegionMapping&    rmap,
+             const std::size_t          regID,
+             const RawCurve::SubSystem  subsys,
+             const std::vector<double>& so,
+             const bool                 useEPS) const;
 
     std::vector<double>
     krg(const ECLGraph&       G,
-        const ECLRestartData& rstrt) const;
+        const ECLRestartData& rstrt,
+        const bool            useEPS = true) const;
+
+    FlowDiagnostics::Graph
+    krgCurve(const ECLRegionMapping&    rmap,
+             const std::size_t          regID,
+             const std::vector<double>& sg,
+             const bool                 useEPS) const;
 
     std::vector<double>
     krw(const ECLGraph&       G,
-        const ECLRestartData& rstrt) const;
+        const ECLRestartData& rstrt,
+        const bool            useEPS = true) const;
+
+    FlowDiagnostics::Graph
+    krwCurve(const ECLRegionMapping&    rmap,
+             const std::size_t          regID,
+             const std::vector<double>& sw,
+             const bool                 useEPS) const;
+
+    void scaleGasSat(const ECLRegionMapping& rmap,
+                     const bool              useEPS,
+                     std::vector<double>&    sg) const;
+
+    void scaleOilSat(const ECLRegionMapping& rmap,
+                     const bool              useEPS,
+                     std::vector<double>&    so_g,
+                     std::vector<double>&    so_w) const;
+
+    void scaleWaterSat(const ECLRegionMapping& rmap,
+                       const bool              useEPS,
+                       std::vector<double>&    sw) const;
+
+    void uniqueReverseScaleSat(std::vector<double>& s) const;
 
     EPSEvaluator::RawTEP
     extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const;
@@ -938,15 +1075,17 @@ private:
 
 Opm::ECLSaturationFunc::Impl::Impl(const ECLGraph&        G,
                                    const ECLInitFileData& init)
-    : rmap_(satnumVector(G, init))
+    : satnum_(satnumVector(G, init))
+    , rmap_  (satnum_)
 {
 }
 
 Opm::ECLSaturationFunc::Impl::Impl(Impl&& rhs)
-    : rmap_(std::move(rhs.rmap_))
-    , oil_ (std::move(rhs.oil_ ))
-    , gas_ (std::move(rhs.gas_ ))
-    , wat_ (std::move(rhs.wat_ ))
+    : satnum_(std::move(rhs.satnum_))
+    , rmap_  (std::move(rhs.rmap_))
+    , oil_   (std::move(rhs.oil_ ))
+    , gas_   (std::move(rhs.gas_ ))
+    , wat_   (std::move(rhs.wat_ ))
 {}
 
 // ---------------------------------------------------------------------
@@ -1087,10 +1226,131 @@ relperm(const ECLGraph&       G,
     return {};
 }
 
+std::vector<Opm::FlowDiagnostics::Graph>
+Opm::ECLSaturationFunc::Impl::
+getSatFuncCurve(const std::vector<RawCurve>& func,
+                const int                    activeCell,
+                const bool                   useEPS) const
+{
+    using SatPointAssoc = std::pair<
+        std::vector<double>,
+        std::unique_ptr<ECLRegionMapping>
+        >;
+
+    auto graph = std::vector<FlowDiagnostics::Graph>{};
+    graph.reserve(func.size());
+
+    const auto regID = static_cast<std::size_t>(this->satnum_[activeCell]);
+
+    auto gas_assoc = SatPointAssoc{};
+    auto oil_assoc = SatPointAssoc{};
+    auto wat_assoc = SatPointAssoc{};
+
+    for (const auto& fi : func) {
+        switch (fi.thisPh) {
+        case ECLPhaseIndex::Aqua:
+        {
+            if (! (this->wat_ && (fi.subsys == RawCurve::SubSystem::OilWater)))
+            {
+                // Water is not an active phase, or we're being asked to
+                // extract the relative permeability curve for water in the
+                // O/G subsystem.  No such curve.
+                graph.emplace_back();
+                continue;
+            }
+
+            if (! wat_assoc.second) {
+                // Region ID 'regID' is traditional, ECL-style one-based
+                // region ID (SATNUM).  Subtract one to create valid table
+                // index.
+                wat_assoc.first = this->wat_->saturationPoints(regID - 1);
+
+                const auto subset =
+                    std::vector<int>(wat_assoc.first.size(), activeCell);
+
+                wat_assoc.second
+                    .reset(new ECLRegionMapping(this->satnum_, subset));
+            }
+
+            auto krw = this->krwCurve(*wat_assoc.second, regID,
+                                      wat_assoc.first, useEPS);
+
+            graph.push_back(std::move(krw));
+        }
+        break;
+
+        case ECLPhaseIndex::Liquid:
+        {
+            if (! this->oil_) {
+                // Oil is not an active phase.  No such curve.
+                graph.emplace_back();
+                continue;
+            }
+
+            if (! oil_assoc.second) {
+                // Region ID 'regID' is traditional, ECL-style one-based
+                // region ID (SATNUM).  Subtract one to create valid table
+                // index.
+                oil_assoc.first = this->oil_->saturationPoints(regID - 1);
+
+                const auto subset =
+                    std::vector<int>(oil_assoc.first.size(), activeCell);
+
+                oil_assoc.second
+                    .reset(new ECLRegionMapping(this->satnum_, subset));
+            }
+
+            auto kro = this->kroCurve(*oil_assoc.second, regID,
+                                      fi.subsys, oil_assoc.first, useEPS);
+
+            graph.push_back(std::move(kro));
+        }
+        break;
+
+        case ECLPhaseIndex::Vapour:
+        {
+            if (! (this->gas_ && (fi.subsys == RawCurve::SubSystem::OilGas)))
+            {
+                // Gas is not an active phase, or we're being asked to
+                // extract the relative permeability curve for gas in the
+                // O/W subsystem.  No such curve.
+                graph.emplace_back();
+                continue;
+            }
+
+            if (! gas_assoc.second) {
+                // Region ID 'regID' is traditional, ECL-style one-based
+                // region ID (SATNUM).  Subtract one to create valid table
+                // index.
+                gas_assoc.first = this->gas_->saturationPoints(regID - 1);
+
+                const auto subset =
+                    std::vector<int>(gas_assoc.first.size(), activeCell);
+
+                gas_assoc.second
+                    .reset(new ECLRegionMapping(this->satnum_, subset));
+            }
+
+            auto krg = this->krgCurve(*gas_assoc.second, regID,
+                                      gas_assoc.first, useEPS);
+
+            graph.push_back(std::move(krg));
+        }
+        break;
+
+        default:
+            break;
+        }
+    }
+
+    return graph;
+}
+
 std::vector<double>
 Opm::ECLSaturationFunc::Impl::
 kro(const ECLGraph&       G,
-    const ECLRestartData& rstrt) const
+    const ECLRestartData& rstrt,
+    const bool            useEPS) const
 {
     auto kr = std::vector<double>{};
 
@@ -1104,13 +1364,7 @@ kro(const ECLGraph&       G,
     auto so_g = oil_saturation(sg, sw, G, rstrt);
     auto so_w = so_g;
 
-    if (this->eps_) {
-        // Independent scaling of So in O/G and O/W sub-systems of an O/G/W
-        // run.  Performs duplicate work in a two-phase case.  Need to take
-        // action if this becomes a bottleneck.
-        this->eps_->scaleOG(this->rmap_, so_g);
-        this->eps_->scaleOW(this->rmap_, so_w);
-    }
+    this->scaleOilSat(this->rmap_, useEPS, so_g, so_w);
 
     // Allocate result.  Member function scatterRegionResult() depends on
     // having an allocated result vector into which to write the values from
@@ -1142,7 +1396,7 @@ kro(const ECLGraph&       G,
         };
 
         // Region ID 'reg' is traditional, ECL-style one-based region ID
-        // (SATNUM).  Subtract one to create valid index.
+        // (SATNUM).  Subtract one to create valid table index.
         const auto& kro_reg =
             this->oil_->kro(reg - 1, So_g, Sg, So_w, Sw);
 
@@ -1152,10 +1406,60 @@ kro(const ECLGraph&       G,
     return kr;
 }
 
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+kroCurve(const ECLRegionMapping&    rmap,
+         const std::size_t          regID,
+         const RawCurve::SubSystem  subsys,
+         const std::vector<double>& so,
+         const bool                 useEPS) const
+{
+    if (! this->oil_) {
+        return FlowDiagnostics::Graph{};
+    }
+
+    auto so_g = so;
+    auto so_w = so_g;
+    if (useEPS && this->eps_) {
+        this->eps_->reverseScaleOG(rmap, so_g);
+        this->eps_->reverseScaleOW(rmap, so_w);
+
+        this->uniqueReverseScaleSat(so_g);
+        this->uniqueReverseScaleSat(so_w);
+    }
+
+    // Capture pertinent, unique So values for graph output.
+    auto abscissas =
+        (subsys == RawCurve::SubSystem::OilGas) ? so_g : so_w;
+
+    const auto nPoints = abscissas.size();
+
+    // Re-expand input arrays to match size requirements of EPS evaluator.
+    so_g.resize(so.size(), 1.0);
+    so_w.resize(so.size(), 1.0);
+
+    this->scaleOilSat(rmap, useEPS, so_g, so_w);
+
+    const auto so_inp = Relperm::Oil::KrFunction::SOil {
+        (subsys == RawCurve::SubSystem::OilGas) ? so_g : so_w
+    };
+
+    // Region ID 'reg' is traditional, ECL-style one-based region ID
+    // (SATNUM).  Subtract one to create valid table index.
+    const auto kr = this->oil_->kro(regID - 1, so_inp, subsys);
+
+    // FD::Graph == pair<vector<double>, vector<double>>
+    return FlowDiagnostics::Graph {
+        std::move(abscissas),
+        { std::begin(kr), std::begin(kr) + nPoints }
+    };
+}
+
 std::vector<double>
 Opm::ECLSaturationFunc::Impl::
 krg(const ECLGraph&       G,
-    const ECLRestartData& rstrt) const
+    const ECLRestartData& rstrt,
+    const bool            useEPS) const
 {
     auto kr = std::vector<double>{};
 
@@ -1165,7 +1469,7 @@ krg(const ECLGraph&       G,
 
     auto sg = G.rawLinearisedCellData<double>(rstrt, "SGAS");
 
-    if (this->eps_) {
+    if (useEPS && this->eps_) {
         this->eps_->scaleGas(this->rmap_, sg);
     }
 
@@ -1183,7 +1487,7 @@ krg(const ECLGraph&       G,
             this->gatherRegionSubset(reg, rmap, sg);
 
         // Region ID 'reg' is traditional, ECL-style one-based region ID
-        // (SATNUM).  Subtract one to create valid index.
+        // (SATNUM).  Subtract one to create valid table index.
         const auto krg_reg =
             this->gas_->krg(reg - 1, sg_reg);
 
@@ -1193,10 +1497,47 @@ krg(const ECLGraph&       G,
     return kr;
 }
 
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+krgCurve(const ECLRegionMapping&    rmap,
+         const std::size_t          regID,
+         const std::vector<double>& sg,
+         const bool                 useEPS) const
+{
+    if (! this->gas_) {
+        return FlowDiagnostics::Graph{};
+    }
+
+    auto sg_inp = sg;
+    if (useEPS && this->eps_) {
+        this->eps_->reverseScaleGas(rmap, sg_inp);
+        this->uniqueReverseScaleSat(sg_inp);
+    }
+
+    auto abscissas = sg_inp;
+    const auto nPoints = abscissas.size();
+
+    // Re-expand input arrays to match size requirements of EPS evaluator.
+    sg_inp.resize(sg.size(), 1.0);
+
+    this->scaleGasSat(rmap, useEPS, sg_inp);
+
+    // Region ID 'reg' is traditional, ECL-style one-based region ID
+    // (SATNUM).  Subtract one to create valid table index.
+    const auto kr = this->gas_->krg(regID - 1, sg_inp);
+
+    // FD::Graph == pair<vector<double>, vector<double>>
+    return FlowDiagnostics::Graph {
+        std::move(abscissas),
+        { std::begin(kr), std::begin(kr) + nPoints }
+    };
+}
+
 std::vector<double>
 Opm::ECLSaturationFunc::Impl::
 krw(const ECLGraph&       G,
-    const ECLRestartData& rstrt) const
+    const ECLRestartData& rstrt,
+    const bool            useEPS) const
 {
     auto kr = std::vector<double>{};
 
@@ -1206,7 +1547,7 @@ krw(const ECLGraph&       G,
 
     auto sw = G.rawLinearisedCellData<double>(rstrt, "SWAT");
 
-    if (this->eps_) {
+    if (useEPS && this->eps_) {
         this->eps_->scaleWat(this->rmap_, sw);
     }
 
@@ -1224,7 +1565,7 @@ krw(const ECLGraph&       G,
             this->gatherRegionSubset(reg, rmap, sw);
 
         // Region ID 'reg' is traditional, ECL-style one-based region ID
-        // (SATNUM).  Subtract one to create valid index.
+        // (SATNUM).  Subtract one to create valid table index.
         const auto krw_reg =
             this->wat_->krw(reg - 1, sw_reg);
 
@@ -1232,6 +1573,90 @@ krw(const ECLGraph&       G,
     });
 
     return kr;
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+krwCurve(const ECLRegionMapping&    rmap,
+         const std::size_t          regID,
+         const std::vector<double>& sw,
+         const bool                 useEPS) const
+{
+    if (! this->wat_) {
+        return FlowDiagnostics::Graph{};
+    }
+
+    auto sw_inp = sw;
+    if (useEPS && this->eps_) {
+        this->eps_->reverseScaleWat(rmap, sw_inp);
+        this->uniqueReverseScaleSat(sw_inp);
+    }
+
+    auto abscissas = sw_inp;
+    const auto nPoints = abscissas.size();
+
+    // Re-expand input arrays to match size requirements of EPS evaluator.
+    sw_inp.resize(sw.size(), 1.0);
+
+    this->scaleWaterSat(rmap, useEPS, sw_inp);
+
+    // Region ID 'reg' is traditional, ECL-style one-based region ID
+    // (SATNUM).  Subtract one to create valid table index.
+    const auto kr = this->wat_->krw(regID - 1, sw_inp);
+
+    // FD::Graph == pair<vector<double>, vector<double>>
+    return FlowDiagnostics::Graph {
+        std::move(abscissas),
+        { std::begin(kr), std::begin(kr) + nPoints }
+    };
+}
+
+void
+Opm::ECLSaturationFunc::Impl::
+scaleGasSat(const ECLRegionMapping& rmap,
+            const bool              useEPS,
+            std::vector<double>&    sg) const
+{
+    if (useEPS && this->eps_) {
+        this->eps_->scaleGas(rmap, sg);
+    }
+}
+
+void
+Opm::ECLSaturationFunc::Impl::
+scaleOilSat(const ECLRegionMapping& rmap,
+            const bool              useEPS,
+            std::vector<double>&    so_g,
+            std::vector<double>&    so_w) const
+{
+    if (useEPS && this->eps_) {
+        // Independent scaling of So in O/G and O/W sub-systems of an O/G/W
+        // run.  Performs duplicate work in a two-phase case.  Need to take
+        // action if this becomes a bottleneck.
+        this->eps_->scaleOG(rmap, so_g);
+        this->eps_->scaleOW(rmap, so_w);
+    }
+}
+
+void
+Opm::ECLSaturationFunc::Impl::
+scaleWaterSat(const ECLRegionMapping& rmap,
+              const bool              useEPS,
+              std::vector<double>&    sg) const
+{
+    if (useEPS && this->eps_) {
+        this->eps_->scaleWat(rmap, sg);
+    }
+}
+
+void
+Opm::ECLSaturationFunc::Impl::
+uniqueReverseScaleSat(std::vector<double>& s) const
+{
+    std::sort(std::begin(s), std::end(s));
+    auto u = std::unique(std::begin(s), std::end(s));
+
+    s.assign(std::begin(s), u);
 }
 
 Opm::ECLSaturationFunc::Impl::EPSEvaluator::RawTEP
@@ -1307,4 +1732,13 @@ relperm(const ECLGraph&       G,
         const ECLPhaseIndex   p) const
 {
     return this->pImpl_->relperm(G, rstrt, p);
+}
+
+std::vector<Opm::FlowDiagnostics::Graph>
+Opm::ECLSaturationFunc::
+getSatFuncCurve(const std::vector<RawCurve>& func,
+                const int                    activeCell,
+                const bool                   useEPS) const
+{
+    return this->pImpl_->getSatFuncCurve(func, activeCell, useEPS);
 }

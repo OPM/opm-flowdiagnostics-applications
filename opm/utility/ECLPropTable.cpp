@@ -90,6 +90,12 @@ Opm::SatFuncInterpolant::SingleTable::maximumSat() const
     return this->interp_.independentVariable().back();
 }
 
+const std::vector<double>&
+Opm::SatFuncInterpolant::SingleTable::saturationPoints() const
+{
+    return this->interp_.independentVariable();
+}
+
 // =====================================================================
 
 Opm::SatFuncInterpolant::SatFuncInterpolant(const ECLPropTableRawData& raw,
@@ -176,4 +182,16 @@ Opm::SatFuncInterpolant::maximumSat() const
     }
 
     return smax;
+}
+
+const std::vector<double>&
+Opm::SatFuncInterpolant::saturationPoints(const InTable& t) const
+{
+    if (t.i >= this->table_.size()) {
+        throw std::invalid_argument {
+            "Invalid Table ID"
+        };
+    }
+
+    return this->table_[t.i].saturationPoints();
 }
