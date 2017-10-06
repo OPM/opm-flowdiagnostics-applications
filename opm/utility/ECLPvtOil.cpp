@@ -92,6 +92,9 @@ public:
     viscosity(const std::vector<double>& rs,
               const std::vector<double>& po) const = 0;
 
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const = 0;
+
     virtual std::unique_ptr<PVxOBase> clone() const = 0;
 };
 
@@ -122,6 +125,12 @@ public:
               const std::vector<double>& po) const override
     {
         return this->interpolant_.viscosity(po);
+    }
+
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const override
+    {
+        return this->interpolant_.getPvtCurve(curve);
     }
 
     virtual std::unique_ptr<PVxOBase> clone() const override
@@ -173,6 +182,15 @@ public:
         const auto x   = TableInterpolant::InnerVariate { po };
 
         return this->interp_.viscosity(key, x);
+    }
+
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve /* curve */) const override
+    {
+        throw std::runtime_error {
+            "Property Evaluator for Live Oil Does not "
+            "Support Retrieving Raw Curves (Blame BSKA)"
+        };
     }
 
     virtual std::unique_ptr<PVxOBase> clone() const override
@@ -370,6 +388,10 @@ public:
         return this->rhoS_[region];
     }
 
+    FlowDiagnostics::Graph
+    getPvtCurve(const RegIdx   region,
+                const RawCurve curve) const;
+
 private:
     std::vector<EvalPtr> eval_;
     std::vector<double>  rhoS_;
@@ -433,6 +455,16 @@ viscosity(const RegIdx               region,
     this->validateRegIdx(region);
 
     return this->eval_[region]->viscosity(rs, po);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLPVT::Oil::Impl::
+getPvtCurve(const RegIdx   region,
+            const RawCurve curve) const
+{
+    this->validateRegIdx(region);
+
+    return this->eval_[region]->getPvtCurve(curve);
 }
 
 void
@@ -506,6 +538,13 @@ viscosity(const int           region,
 double Opm::ECLPVT::Oil::surfaceMassDensity(const int region) const
 {
     return this->pImpl_->surfaceMassDensity(region);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLPVT::Oil::
+getPvtCurve(const RawCurve curve, const int region) const
+{
+    return this->pImpl_->getPvtCurve(region, curve);
 }
 
 // =====================================================================

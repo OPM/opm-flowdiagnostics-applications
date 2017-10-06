@@ -95,6 +95,9 @@ public:
     viscosity(const std::vector<double>& rv,
               const std::vector<double>& pg) const = 0;
 
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const = 0;
+
     virtual std::unique_ptr<PVxGBase> clone() const = 0;
 };
 
@@ -125,6 +128,12 @@ public:
               const std::vector<double>& pg) const override
     {
         return this->interpolant_.viscosity(pg);
+    }
+
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const override
+    {
+        return this->interpolant_.getPvtCurve(curve);
     }
 
     virtual std::unique_ptr<PVxGBase> clone() const override
@@ -176,6 +185,15 @@ public:
         const auto x   = TableInterpolant::InnerVariate { rv };
 
         return this->interp_.viscosity(key, x);
+    }
+
+    virtual Opm::FlowDiagnostics::Graph
+    getPvtCurve(const Opm::ECLPVT::RawCurve /* curve */) const override
+    {
+        throw std::runtime_error {
+            "Property Evaluator for Wet Gas Does not "
+            "Support Retrieving Raw Curves (Blame BSKA)"
+        };
     }
 
     virtual std::unique_ptr<PVxGBase> clone() const override
@@ -373,6 +391,10 @@ public:
         return this->rhoS_[region];
     }
 
+    FlowDiagnostics::Graph
+    getPvtCurve(const RegIdx   region,
+                const RawCurve curve) const;
+
 private:
     std::vector<EvalPtr> eval_;
     std::vector<double>  rhoS_;
@@ -436,6 +458,16 @@ viscosity(const RegIdx               region,
     this->validateRegIdx(region);
 
     return this->eval_[region]->viscosity(rv, pg);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLPVT::Gas::Impl::
+getPvtCurve(const RegIdx   region,
+            const RawCurve curve) const
+{
+    this->validateRegIdx(region);
+
+    return this->eval_[region]->getPvtCurve(curve);
 }
 
 void
@@ -509,6 +541,13 @@ viscosity(const int           region,
 double Opm::ECLPVT::Gas::surfaceMassDensity(const int region) const
 {
     return this->pImpl_->surfaceMassDensity(region);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLPVT::Gas::
+getPvtCurve(const RawCurve curve, const int region) const
+{
+    return this->pImpl_->getPvtCurve(region, curve);
 }
 
 // =====================================================================

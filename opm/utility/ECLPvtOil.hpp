@@ -20,6 +20,8 @@
 #ifndef OPM_ECLPVTOIL_HEADER_INCLUDED
 #define OPM_ECLPVTOIL_HEADER_INCLUDED
 
+#include <opm/utility/ECLPvtCommon.hpp>
+
 #include <memory>
 #include <vector>
 
@@ -147,6 +149,27 @@ namespace Opm { namespace ECLPVT {
         /// \return Mass density of oil at surface in particular model
         ///    region.
         double surfaceMassDensity(const int region) const;
+
+        /// Retrieve 2D graph representation of Oil PVT property function in
+        /// partcular PVT region.
+        ///
+        /// \param[in] curve PVT property curve descriptor
+        ///
+        /// \param[in] region Region ID.  Non-negative integer typically
+        ///    derived from the PVTNUM mapping vector.
+        ///
+        /// \return 2D graph for PVT property curve identified by
+        ///    requests represented by \p func and \p region.
+        ///
+        /// Example: Retrieve oil viscosity curve in PVT region 3 (zero
+        ///    based, i.e., those cells for which PVTNUM==4).
+        ///
+        ///    \code
+        ///       const auto graph =
+        ///           pvtOil.getPvtCurve(ECLPVT::RawCurve::Viscosity, 3);
+        ///    \endcode
+        FlowDiagnostics::Graph
+        getPvtCurve(const RawCurve curve, const int region) const;
 
     private:
         /// Implementation class.
