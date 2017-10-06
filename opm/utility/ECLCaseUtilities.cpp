@@ -16,13 +16,46 @@
 #include <ert/ecl/ecl_file_view.h>
 #include <ert/util/ert_unique_ptr.hpp>
 
+/// Function object that matches strings with a common prefix (i.e., a file
+/// name base) followed by .F or .X and then exactly four digits and nothing
+/// further.
+///
+/// In other words, if prefix is "NORNE_ATW2013", then the function will
+/// return true for strings of the form
+///
+///   -* NORNE_ATW2013.F0000
+///   -* NORNE_ATW2013.X1234
+///
+/// but it will return false for anything else like strings of the form
+///
+///   -* NORNE_ATW2013.S0123
+///   -* NORNE_ATW2013.FUNRST
+///   -* NORNE_ATW2013.X12345
+///   -* NORNE_ATW2013.F012
+///   -* NORNE_ATW2013.X012Y
+///   -* NORNE_ATW2013.X0123.4
+///   -* NORNE_ATW2014.F0001
+///
 class IsSeparateRestart
 {
 public:
+    /// Constructor.
+    ///
+    /// \param[in] prefix Common string prefix (file name base).
     IsSeparateRestart(const std::string& prefix)
         : restart_(prefix + R"~~(\.(F|X)\d{4}$)~~")
-    {}
+    {
+        // Common prefix + '.' + (F or X) + four digits + "end of string".
+    }
 
+    /// Match string against stored regular expression engine.
+    ///
+    /// \param[in] e Name, possibly full path, of file system element.
+    ///    Typically names a regular file.
+    ///
+    /// \return True if the element matches the entire stored regular
+    ///    expression (\code regex_match() \endcode rather than \code
+    ///    regex_search() \endcode), false otherwise.
     bool operator()(const boost::filesystem::path& e) const
     {
         return std::regex_match(e.filename().generic_string(),
@@ -30,6 +63,7 @@ public:
     }
 
 private:
+    /// Regular expression against which to match filesystem elements.
     std::regex restart_;
 };
 
