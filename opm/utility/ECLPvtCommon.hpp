@@ -20,6 +20,7 @@
 #ifndef OPM_ECLPVTCOMMON_HEADER_INCLUDED
 #define OPM_ECLPVTCOMMON_HEADER_INCLUDED
 
+#include <opm/flowdiagnostics/DerivedQuantities.hpp>
 #include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLPiecewiseLinearInterpolant.hpp>
 #include <opm/utility/ECLPropTable.hpp>
@@ -287,6 +288,14 @@ namespace Opm { namespace ECLPVT {
         };
     };
 
+    enum class RawCurve {
+        /// Formation volume factor (B_\alpha)
+        FVF,
+
+        /// Viscosity
+        Viscosity,
+    };
+
     template <std::size_t N>
     class DenseVector {
     public:
@@ -425,6 +434,21 @@ namespace Opm { namespace ECLPVT {
         /// \return Phase viscosity for each pressure point.
         std::vector<double>
         viscosity(const std::vector<double>& p) const;
+
+        /// Retrieve 2D graph representation PVT property function.
+        ///
+        /// \param[in] curve PVT property curve descriptor
+        ///
+        /// \return 2D graph for PVT property curve identified by
+        ///    requests represented by \p func.
+        ///
+        /// Example: Retrieve formation volume factor curve.
+        ///
+        ///    \code
+        ///       const auto graph =
+        ///           pvdx.getPvtCurve(ECLPVT::RawCurve::FVF);
+        ///    \endcode
+        FlowDiagnostics::Graph getPvtCurve(const RawCurve curve) const;
 
     private:
         /// Extrapolation policy for property evaluator/interpolant.
