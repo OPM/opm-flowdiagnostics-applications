@@ -27,6 +27,7 @@ list (APPEND MAIN_SOURCE_FILES
         opm/utility/ECLGraph.cpp
         opm/utility/ECLPropTable.cpp
         opm/utility/ECLPvtCommon.cpp
+        opm/utility/ECLPvtCurveCollection.cpp
         opm/utility/ECLPvtGas.cpp
         opm/utility/ECLPvtOil.cpp
         opm/utility/ECLPvtWater.cpp
@@ -54,6 +55,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         examples/computeToFandTracers.cpp
         examples/computeTracers.cpp
         examples/extractFromRestart.cpp
+        examples/extractPropCurves.cpp
         tests/runAcceptanceTest.cpp
         tests/runLinearisedCellDataTest.cpp
         tests/runTransTest.cpp
@@ -68,6 +70,7 @@ list (APPEND PUBLIC_HEADER_FILES
         opm/utility/ECLPiecewiseLinearInterpolant.hpp
         opm/utility/ECLPropTable.hpp
         opm/utility/ECLPvtCommon.hpp
+        opm/utility/ECLPvtCurveCollection.hpp
         opm/utility/ECLPvtGas.hpp
         opm/utility/ECLPvtOil.hpp
         opm/utility/ECLPvtWater.hpp
