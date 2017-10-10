@@ -147,9 +147,10 @@ namespace {
         };
 
         auto most_recent = fs::path{};
-        auto max_mtime   = 0 * fs::last_write_time(prefix.parent_path());
+        const fs::path parent_path = prefix.parent_path() == "" ? "." : prefix.parent_path();
+        auto max_mtime   = 0 * fs::last_write_time(parent_path);
 
-        for (auto i = fs::directory_iterator(prefix.parent_path()),
+        for (auto i = fs::directory_iterator(parent_path),
                   e = fs::directory_iterator();
              i != e; ++i)
         {
