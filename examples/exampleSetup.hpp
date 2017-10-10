@@ -107,12 +107,13 @@ namespace example {
     }
 
     template <class WellFluxes>
-    Opm::FlowDiagnostics::CellSetValues
+    std::map<Opm::FlowDiagnostics::CellSetID, Opm::FlowDiagnostics::CellSetValues>
     extractWellFlows(const Opm::ECLGraph& G,
                      const WellFluxes&    well_fluxes)
     {
-        Opm::FlowDiagnostics::CellSetValues inflow;
+        std::map<Opm::FlowDiagnostics::CellSetID, Opm::FlowDiagnostics::CellSetValues> well_flows;
         for (const auto& well : well_fluxes) {
+            Opm::FlowDiagnostics::CellSetValues& inflow = well_flows[Opm::FlowDiagnostics::CellSetID(well.name)];
             for (const auto& completion : well.completions) {
                 const auto& gridName = completion.gridName;
                 const auto& ijk = completion.ijk;
@@ -128,7 +129,7 @@ namespace example {
             }
         }
 
-        return inflow;
+        return well_flows;
     }
 
 
