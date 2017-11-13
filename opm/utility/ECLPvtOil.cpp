@@ -30,6 +30,7 @@
 #include <cmath>
 #include <exception>
 #include <functional>
+#include <initializer_list>
 #include <memory>
 #include <stdexcept>
 #include <string>
@@ -134,6 +135,11 @@ public:
     getPvtCurve(const Opm::ECLPVT::RawCurve      curve,
                 const Opm::ECLUnits::UnitSystem& usys) const override
     {
+        if (curve == Opm::ECLPVT::RawCurve::SaturatedState) {
+            // Not applicable to dead oil.  Return empty.
+            return { Opm::FlowDiagnostics::Graph{} };
+        }
+
         auto pvtcurve = this->interpolant_.getPvtCurve(curve);
 
         const auto x_unit = usys.pressure();
@@ -174,7 +180,8 @@ public:
 
     LiveOil(std::vector<double>              key,
             std::vector<SubtableInterpolant> propInterp)
-        : interp_(std::move(key), std::move(propInterp))
+        : key_   (key)          // Copy
+        , interp_(std::move(key), std::move(propInterp))
     {}
 
     virtual std::vector<double>
@@ -207,6 +214,10 @@ public:
     getPvtCurve(const Opm::ECLPVT::RawCurve      curve,
                 const Opm::ECLUnits::UnitSystem& usys) const override
     {
+        if (curve == ::Opm::ECLPVT::RawCurve::SaturatedState) {
+            return this->saturatedState(usys);
+        }
+
         auto curves = this->interp_.getPvtCurve(curve);
 
         const auto x_unit = usys.pressure();
@@ -235,8 +246,39 @@ public:
 private:
     using TableInterpolant = ::Opm::ECLPVT::PVTx<SubtableInterpolant>;
 
-    TableInterpolant interp_;
+    std::vector<double> key_;
+    TableInterpolant    interp_;
+
+    std::vector<Opm::FlowDiagnostics::Graph>
+    saturatedState(const Opm::ECLUnits::UnitSystem& usys) const;
 };
+
+std::vector<Opm::FlowDiagnostics::Graph>
+LiveOil::saturatedState(const Opm::ECLUnits::UnitSystem& usys) const
+{
+    const auto press_unit = usys.pressure();
+    const auto rs_unit    = usys.dissolvedGasOilRat();
+
+    auto rs = this->key_;
+    auto p  = this->interp_.getSaturatedPoints();
+
+    if (rs.size() != p.size()) {
+        throw std::invalid_argument {
+            "Inconsistent table sizes of saturated gas function (RsSat(p))"
+        };
+    }
+
+    for (auto n = rs.size(), i = 0*n; i < n; ++i) {
+        p [i] = ::Opm::unit::convert::to(p [i], press_unit);
+        rs[i] = ::Opm::unit::convert::to(rs[i], rs_unit);
+    }
+
+    auto graph = Opm::FlowDiagnostics::Graph {
+        std::move(p), std::move(rs)
+    };
+
+    return { std::move(graph) };
+}
 
 // #####################################################################
 

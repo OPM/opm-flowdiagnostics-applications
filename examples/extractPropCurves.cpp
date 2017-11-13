@@ -200,6 +200,33 @@ namespace {
 
         printGraph(std::cout, "mu_o", graph);
     }
+
+    // -----------------------------------------------------------------
+    // Saturated states (RvSat(Pg) and RsSat(Po))
+
+    void rvSat(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+               const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+        using PI = Opm::ECLPhaseIndex;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::SaturatedState, PI::Vapour, activeCell);
+
+        printGraph(std::cout, "rvSat", graph);
+    }
+
+    void rsSat(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+               const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+        using PI = Opm::ECLPhaseIndex;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::SaturatedState, PI::Liquid, activeCell);
+
+        printGraph(std::cout, "rsSat", graph);
+    }
 } // namespace Anonymous
 
 int main(int argc, char* argv[])
@@ -229,6 +256,9 @@ try {
     if (prm.getDefault("mu_g", false)) { mu_g(pvtCC, cellID); }
     if (prm.getDefault("Bo"  , false)) { Bo  (pvtCC, cellID); }
     if (prm.getDefault("mu_o", false)) { mu_o(pvtCC, cellID); }
+
+    if (prm.getDefault("rvSat", false)) { rvSat(pvtCC, cellID); }
+    if (prm.getDefault("rsSat", false)) { rsSat(pvtCC, cellID); }
 }
 catch (const std::exception& e) {
     std::cerr << "Caught Exception: " << e.what() << '\n';

@@ -296,6 +296,9 @@ namespace Opm { namespace ECLPVT {
 
         /// Viscosity
         Viscosity,
+
+        /// Enveloping curve for saturated state (wet gas or live oil)
+        SaturatedState,
     };
 
     template <std::size_t N>
@@ -674,6 +677,20 @@ namespace Opm { namespace ECLPVT {
             }
 
             return ret;
+        }
+
+        std::vector<double> getSaturatedPoints() const
+        {
+            auto y = std::vector<double>{};
+            y.reserve(this->propInterp_.size());
+
+            for (const auto& interp : this->propInterp_) {
+                const auto& yi = interp.independentVariable();
+
+                y.push_back(yi[0]);
+            }
+
+            return y;
         }
 
     private:
