@@ -21,6 +21,7 @@
 
 #include <opm/utility/ECLResultData.hpp>
 
+#include <initializer_list>
 #include <vector>
 
 namespace {
@@ -38,6 +39,27 @@ namespace {
 
         return pvtnum;
     }
+
+    std::vector<Opm::FlowDiagnostics::Graph> emptyFDGraph()
+    {
+        return { Opm::FlowDiagnostics::Graph{} };
+    }
+
+    template <class PvtPtr>
+    std::vector<Opm::FlowDiagnostics::Graph>
+    rawPvtCurve(PvtPtr&                     pvt, // ref to shared_ptr<>
+                const Opm::ECLPVT::RawCurve curve,
+                const int                   regID)
+    {
+        if (pvt != nullptr) {
+            // Requested properties are availble.  Extract pertinent curves.
+            return pvt->getPvtCurve(curve, regID);
+        }
+
+        // Result set does not provide requisite tabulated properties.
+        // Return empty.
+        return emptyFDGraph();
+    }
 }
 
 Opm::ECLPVT::ECLPvtCurveCollection::
@@ -48,7 +70,7 @@ ECLPvtCurveCollection(const ECLGraph&        G,
     , oil_   (CreateOilPVTInterpolant::fromECLOutput(init)) // u_p<> -> s_p<>
 {}
 
-Opm::FlowDiagnostics::Graph
+std::vector<Opm::FlowDiagnostics::Graph>
 Opm::ECLPVT::ECLPvtCurveCollection::
 getPvtCurve(const RawCurve      curve,
             const ECLPhaseIndex phase,
@@ -57,14 +79,14 @@ getPvtCurve(const RawCurve      curve,
     if (phase == ECLPhaseIndex::Aqua) {
         // Not supported at this time.
         // Return empty.
-        return FlowDiagnostics::Graph{};
+        return emptyFDGraph();
     }
 
     if (static_cast<decltype(this->pvtnum_.size())>(activeCell)
         >= this->pvtnum_.size())
     {
         // Active cell index out of bounds.  Return empty.
-        return FlowDiagnostics::Graph{};
+        return emptyFDGraph();
     }
 
     // PVTNUM is traditional one-based region identifier.  Subtract one to
@@ -72,16 +94,10 @@ getPvtCurve(const RawCurve      curve,
     const auto regID = this->pvtnum_[activeCell] - 1;
 
     if (phase == ECLPhaseIndex::Liquid) {
-        // return this->oil_->getPvtCurve(curve, regID);
-        return FlowDiagnostics::Graph{};
+        // Caller requests oil properties.
+        return rawPvtCurve(this->oil_, curve, regID);
     }
 
-    if (this->gas_) {
-        return this->gas_->getPvtCurve(curve, regID);
-    }
-    else {
-        // Result set does not provide tabulated gas properties.  Return
-        // empty.
-        return FlowDiagnostics::Graph{};
-    }
+    // Call requests gas properties.
+    return rawPvtCurve(this->gas_, curve, regID);
 }

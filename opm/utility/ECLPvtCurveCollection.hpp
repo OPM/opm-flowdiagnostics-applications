@@ -48,7 +48,7 @@ namespace Opm { namespace ECLPVT {
         ECLPvtCurveCollection(const ECLGraph&        G,
                               const ECLInitFileData& init);
 
-        FlowDiagnostics::Graph
+        std::vector<FlowDiagnostics::Graph>
         getPvtCurve(const RawCurve      curve,
                     const ECLPhaseIndex phase,
                     const int           activeCell) const;

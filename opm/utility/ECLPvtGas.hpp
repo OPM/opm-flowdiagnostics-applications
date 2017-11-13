@@ -161,8 +161,11 @@ namespace Opm { namespace ECLPVT {
         /// \param[in] region Region ID.  Non-negative integer typically
         ///    derived from the PVTNUM mapping vector.
         ///
-        /// \return 2D graph for PVT property curve identified by
-        ///    requests represented by \p func and \p region.
+        /// \return Collection of 2D graphs for PVT property curve
+        ///    identified by requests represented by \p func and \p region.
+        ///    One curve (vector element) for each pressure node.  Single
+        ///    curve (i.e., a single vector element) in the case of dry gas
+        ///    (no vaporised oil).
         ///
         /// Example: Retrieve gas formation volume factor curve in PVT
         ///    region 0 (zero based, i.e., cells for which PVTNUM==1).
@@ -171,7 +174,7 @@ namespace Opm { namespace ECLPVT {
         ///       const auto graph =
         ///           pvtGas.getPvtCurve(ECLPVT::RawCurve::FVF, 0);
         ///    \endcode
-        FlowDiagnostics::Graph
+        std::vector<FlowDiagnostics::Graph>
         getPvtCurve(const RawCurve curve, const int region) const;
 
     private:

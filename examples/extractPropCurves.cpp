@@ -37,23 +37,27 @@
 
 namespace {
     template <class OStream>
-    void printGraph(OStream&                           os,
-                    const std::string&                 name,
-                    const Opm::FlowDiagnostics::Graph& graph)
+    void printGraph(OStream&                                        os,
+                    const std::string&                              name,
+                    const std::vector<Opm::FlowDiagnostics::Graph>& graphs)
     {
-        const auto& x = graph.first;
-        const auto& y = graph.second;
-
         const auto oprec  = os.precision(16);
         const auto oflags = os.setf(std::ios_base::scientific);
 
-        os << name << " = [\n";
+        auto k = 1;
+        for (const auto& graph : graphs) {
+            const auto& x = graph.first;
+            const auto& y = graph.second;
 
-        for (auto n = x.size(), i = 0*n; i < n; ++i) {
-            os << x[i] << ' ' << y[i] << '\n';
+            os << name << '{' << k << "} = [\n";
+
+            for (auto n = x.size(), i = 0*n; i < n; ++i) {
+                os << x[i] << ' ' << y[i] << '\n';
+            }
+
+            os << "];\n\n";
+            k += 1;
         }
-
-        os << "];\n\n";
 
         os.setf(oflags);
         os.precision(oprec);
@@ -81,7 +85,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krg", graph[0]);
+        printGraph(std::cout, "krg", graph);
     }
 
     void krog(const Opm::ECLSaturationFunc& sfunc,
@@ -103,7 +107,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krog", graph[0]);
+        printGraph(std::cout, "krog", graph);
     }
 
     void krow(const Opm::ECLSaturationFunc& sfunc,
@@ -125,7 +129,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krow", graph[0]);
+        printGraph(std::cout, "krow", graph);
     }
 
     void krw(const Opm::ECLSaturationFunc& sfunc,
@@ -147,7 +151,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krw", graph[0]);
+        printGraph(std::cout, "krw", graph);
     }
 
     // -----------------------------------------------------------------
