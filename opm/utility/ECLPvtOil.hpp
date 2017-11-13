@@ -21,6 +21,7 @@
 #define OPM_ECLPVTOIL_HEADER_INCLUDED
 
 #include <opm/utility/ECLPvtCommon.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
 
 #include <memory>
 #include <vector>
@@ -158,6 +159,11 @@ namespace Opm { namespace ECLPVT {
         /// \param[in] region Region ID.  Non-negative integer typically
         ///    derived from the PVTNUM mapping vector.
         ///
+        /// \param[in] usys Unit system.  Collection of units to which the
+        ///    raw, tabulated PVT curve data will be converted.  Usually
+        ///    created by function \code ECLUnits::createUnitSystem()
+        ///    \endcode or a similar facility.
+        ///
         /// \return Collection of 2D graphs for PVT property curve
         ///    identified by requests represented by \p func and \p region.
         ///    One curve (vector element) for each dissolved gas/oil ratio
@@ -172,7 +178,9 @@ namespace Opm { namespace ECLPVT {
         ///           pvtOil.getPvtCurve(ECLPVT::RawCurve::Viscosity, 3);
         ///    \endcode
         std::vector<FlowDiagnostics::Graph>
-        getPvtCurve(const RawCurve curve, const int region) const;
+        getPvtCurve(const RawCurve              curve,
+                    const int                   region,
+                    const ECLUnits::UnitSystem& usys) const;
 
     private:
         /// Implementation class.

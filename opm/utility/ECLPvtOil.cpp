@@ -24,6 +24,8 @@
 #include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 
+#include <opm/parser/eclipse/Units/Units.hpp>
+
 #include <cassert>
 #include <cmath>
 #include <exception>
@@ -93,7 +95,8 @@ public:
               const std::vector<double>& po) const = 0;
 
     virtual std::vector<Opm::FlowDiagnostics::Graph>
-    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const = 0;
+    getPvtCurve(const Opm::ECLPVT::RawCurve      curve,
+                const Opm::ECLUnits::UnitSystem& usys) const = 0;
 
     virtual std::unique_ptr<PVxOBase> clone() const = 0;
 };
@@ -128,9 +131,25 @@ public:
     }
 
     virtual std::vector<Opm::FlowDiagnostics::Graph>
-    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const override
+    getPvtCurve(const Opm::ECLPVT::RawCurve      curve,
+                const Opm::ECLUnits::UnitSystem& usys) const override
     {
-        return { this->interpolant_.getPvtCurve(curve) };
+        auto pvtcurve = this->interpolant_.getPvtCurve(curve);
+
+        const auto x_unit = usys.pressure();
+        const auto y_unit = (curve == ::Opm::ECLPVT::RawCurve::FVF)
+            ? (usys.reservoirVolume() / usys.surfaceVolumeLiquid())
+            : usys.viscosity();
+
+        auto& x = pvtcurve.first;
+        auto& y = pvtcurve.second;
+
+        for (auto n = x.size(), i = 0*n; i < n; ++i) {
+            x[i] = ::Opm::unit::convert::to(x[i], x_unit);
+            y[i] = ::Opm::unit::convert::to(y[i], y_unit);
+        }
+
+        return { std::move(pvtcurve) };
     }
 
     virtual std::unique_ptr<PVxOBase> clone() const override
@@ -185,9 +204,27 @@ public:
     }
 
     virtual std::vector<Opm::FlowDiagnostics::Graph>
-    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const override
+    getPvtCurve(const Opm::ECLPVT::RawCurve      curve,
+                const Opm::ECLUnits::UnitSystem& usys) const override
     {
-        return this->interp_.getPvtCurve(curve);
+        auto curves = this->interp_.getPvtCurve(curve);
+
+        const auto x_unit = usys.pressure();
+        const auto y_unit = (curve == ::Opm::ECLPVT::RawCurve::FVF)
+            ? (usys.reservoirVolume() / usys.surfaceVolumeLiquid())
+            : usys.viscosity();
+
+        for (auto& curve : curves) {
+            auto& x = curve.first;
+            auto& y = curve.second;
+
+            for (auto n = x.size(), i = 0*n; i < n; ++i) {
+                x[i] = ::Opm::unit::convert::to(x[i], x_unit);
+                y[i] = ::Opm::unit::convert::to(y[i], y_unit);
+            }
+        }
+
+        return curves;
     }
 
     virtual std::unique_ptr<PVxOBase> clone() const override
@@ -386,8 +423,9 @@ public:
     }
 
     std::vector<FlowDiagnostics::Graph>
-    getPvtCurve(const RegIdx   region,
-                const RawCurve curve) const;
+    getPvtCurve(const RegIdx                region,
+                const RawCurve              curve,
+                const ECLUnits::UnitSystem& usys) const;
 
 private:
     std::vector<EvalPtr> eval_;
@@ -456,12 +494,13 @@ viscosity(const RegIdx               region,
 
 std::vector<Opm::FlowDiagnostics::Graph>
 Opm::ECLPVT::Oil::Impl::
-getPvtCurve(const RegIdx   region,
-            const RawCurve curve) const
+getPvtCurve(const RegIdx                region,
+            const RawCurve              curve,
+            const ECLUnits::UnitSystem& usys) const
 {
     this->validateRegIdx(region);
 
-    return this->eval_[region]->getPvtCurve(curve);
+    return this->eval_[region]->getPvtCurve(curve, usys);
 }
 
 void
@@ -539,9 +578,11 @@ double Opm::ECLPVT::Oil::surfaceMassDensity(const int region) const
 
 std::vector<Opm::FlowDiagnostics::Graph>
 Opm::ECLPVT::Oil::
-getPvtCurve(const RawCurve curve, const int region) const
+getPvtCurve(const RawCurve              curve,
+            const int                   region,
+            const ECLUnits::UnitSystem& usys) const
 {
-    return this->pImpl_->getPvtCurve(region, curve);
+    return this->pImpl_->getPvtCurve(region, curve, usys);
 }
 
 // =====================================================================

@@ -24,6 +24,8 @@
 #include <initializer_list>
 #include <vector>
 
+#include <ert/ecl/ecl_kw_magic.h>
+
 namespace {
     std::vector<int>
     pvtnumVector(const ::Opm::ECLGraph&        G,
@@ -40,6 +42,14 @@ namespace {
         return pvtnum;
     }
 
+    std::unique_ptr<const Opm::ECLUnits::UnitSystem>
+    createUnitSystem(const ::Opm::ECLInitFileData& init)
+    {
+        const auto& ih = init.keywordData<int>(INTEHEAD_KW);
+
+        return ::Opm::ECLUnits::createUnitSystem(ih[ INTEHEAD_UNIT_INDEX ]);
+    }
+
     std::vector<Opm::FlowDiagnostics::Graph> emptyFDGraph()
     {
         return { Opm::FlowDiagnostics::Graph{} };
@@ -47,13 +57,13 @@ namespace {
 
     template <class PvtPtr>
     std::vector<Opm::FlowDiagnostics::Graph>
-    rawPvtCurve(PvtPtr&                     pvt, // ref to shared_ptr<>
-                const Opm::ECLPVT::RawCurve curve,
-                const int                   regID)
+    rawPvtCurve(PvtPtr&                          pvt, // ref to shared_ptr<>
+                const Opm::ECLPVT::RawCurve      curve,
+                const int                        regID,
+                const Opm::ECLUnits::UnitSystem& usys)
     {
         if (pvt != nullptr) {
-            // Requested properties are availble.  Extract pertinent curves.
-            return pvt->getPvtCurve(curve, regID);
+            return pvt->getPvtCurve(curve, regID, usys);
         }
 
         // Result set does not provide requisite tabulated properties.
@@ -68,6 +78,7 @@ ECLPvtCurveCollection(const ECLGraph&        G,
     : pvtnum_(pvtnumVector(G, init))
     , gas_   (CreateGasPVTInterpolant::fromECLOutput(init)) // u_p<> -> s_p<>
     , oil_   (CreateOilPVTInterpolant::fromECLOutput(init)) // u_p<> -> s_p<>
+    , usys_  (createUnitSystem(init))                       // u_p<> -> s_p<>
 {}
 
 std::vector<Opm::FlowDiagnostics::Graph>
@@ -95,9 +106,9 @@ getPvtCurve(const RawCurve      curve,
 
     if (phase == ECLPhaseIndex::Liquid) {
         // Caller requests oil properties.
-        return rawPvtCurve(this->oil_, curve, regID);
+        return rawPvtCurve(this->oil_, curve, regID, *this->usys_);
     }
 
     // Call requests gas properties.
-    return rawPvtCurve(this->gas_, curve, regID);
+    return rawPvtCurve(this->gas_, curve, regID, *this->usys_);
 }

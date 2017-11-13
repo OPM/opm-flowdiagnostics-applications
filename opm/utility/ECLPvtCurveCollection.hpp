@@ -25,6 +25,7 @@
 #include <opm/utility/ECLPvtCommon.hpp>
 #include <opm/utility/ECLPvtGas.hpp>
 #include <opm/utility/ECLPvtOil.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
 
 #include <memory>
 #include <vector>
@@ -62,6 +63,9 @@ namespace Opm { namespace ECLPVT {
 
         /// Oil PVT property evaluator.
         std::shared_ptr<Oil> oil_;
+
+        /// Unit handling (SI -> result-set convention)
+        std::shared_ptr<const ECLUnits::UnitSystem> usys_;
     };
 
 }} // Opm::ECLPVT
