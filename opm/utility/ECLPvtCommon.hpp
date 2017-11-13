@@ -645,6 +645,37 @@ namespace Opm { namespace ECLPVT {
             });
         }
 
+        /// Retrieve 2D graph representation PVT property function.
+        ///
+        /// \param[in] curve PVT property curve descriptor
+        ///
+        /// \return Collection of 2D graphs for PVT property curve
+        ///    identified by requests represented by \p func.
+        ///
+        /// \return Collection of 2D graphs for PVT property curve
+        ///    identified by requests represented by \p curve.  One curve
+        ///    (vector element) for each tabulated value of the function's
+        ///    primary lookup key.
+        ///
+        /// Example: Retrieve formation volume factor curves.
+        ///
+        ///    \code
+        ///       const auto graph =
+        ///           pvtx.getPvtCurve(ECLPVT::RawCurve::FVF);
+        ///    \endcode
+        std::vector<FlowDiagnostics::Graph>
+        getPvtCurve(const RawCurve curve) const
+        {
+            auto ret = std::vector<FlowDiagnostics::Graph>{};
+            ret.reserve(this->propInterp_.size());
+
+            for (const auto& interp : this->propInterp_) {
+                ret.push_back(extractRawPVTCurve(interp, curve));
+            }
+
+            return ret;
+        }
+
     private:
         using InnerEvalPoint = typename std::decay<
             decltype(std::declval<SubtableInterpolant>().classifyPoint(0.0))

@@ -188,12 +188,9 @@ public:
     }
 
     virtual std::vector<Opm::FlowDiagnostics::Graph>
-    getPvtCurve(const Opm::ECLPVT::RawCurve /* curve */) const override
+    getPvtCurve(const Opm::ECLPVT::RawCurve curve) const override
     {
-        throw std::runtime_error {
-            "Property Evaluator for Wet Gas Does not "
-            "Support Retrieving Raw Curves (Blame BSKA)"
-        };
+        return this->interp_.getPvtCurve(curve);
     }
 
     virtual std::unique_ptr<PVxGBase> clone() const override
