@@ -37,23 +37,27 @@
 
 namespace {
     template <class OStream>
-    void printGraph(OStream&                           os,
-                    const std::string&                 name,
-                    const Opm::FlowDiagnostics::Graph& graph)
+    void printGraph(OStream&                                        os,
+                    const std::string&                              name,
+                    const std::vector<Opm::FlowDiagnostics::Graph>& graphs)
     {
-        const auto& x = graph.first;
-        const auto& y = graph.second;
-
         const auto oprec  = os.precision(16);
         const auto oflags = os.setf(std::ios_base::scientific);
 
-        os << name << " = [\n";
+        auto k = 1;
+        for (const auto& graph : graphs) {
+            const auto& x = graph.first;
+            const auto& y = graph.second;
 
-        for (auto n = x.size(), i = 0*n; i < n; ++i) {
-            os << x[i] << ' ' << y[i] << '\n';
+            os << name << '{' << k << "} = [\n";
+
+            for (auto n = x.size(), i = 0*n; i < n; ++i) {
+                os << x[i] << ' ' << y[i] << '\n';
+            }
+
+            os << "];\n\n";
+            k += 1;
         }
-
-        os << "];\n\n";
 
         os.setf(oflags);
         os.precision(oprec);
@@ -81,7 +85,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krg", graph[0]);
+        printGraph(std::cout, "krg", graph);
     }
 
     void krog(const Opm::ECLSaturationFunc& sfunc,
@@ -103,7 +107,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krog", graph[0]);
+        printGraph(std::cout, "krog", graph);
     }
 
     void krow(const Opm::ECLSaturationFunc& sfunc,
@@ -125,7 +129,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krow", graph[0]);
+        printGraph(std::cout, "krow", graph);
     }
 
     void krw(const Opm::ECLSaturationFunc& sfunc,
@@ -147,7 +151,7 @@ namespace {
         const auto graph =
             sfunc.getSatFuncCurve(func, activeCell, useEPS);
 
-        printGraph(std::cout, "krw", graph[0]);
+        printGraph(std::cout, "krw", graph);
     }
 
     // -----------------------------------------------------------------
@@ -196,6 +200,33 @@ namespace {
 
         printGraph(std::cout, "mu_o", graph);
     }
+
+    // -----------------------------------------------------------------
+    // Saturated states (RvSat(Pg) and RsSat(Po))
+
+    void rvSat(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+               const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+        using PI = Opm::ECLPhaseIndex;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::SaturatedState, PI::Vapour, activeCell);
+
+        printGraph(std::cout, "rvSat", graph);
+    }
+
+    void rsSat(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
+               const int                                 activeCell)
+    {
+        using RC = Opm::ECLPVT::RawCurve;
+        using PI = Opm::ECLPhaseIndex;
+
+        const auto graph = pvtCurves
+            .getPvtCurve(RC::SaturatedState, PI::Liquid, activeCell);
+
+        printGraph(std::cout, "rsSat", graph);
+    }
 } // namespace Anonymous
 
 int main(int argc, char* argv[])
@@ -225,6 +256,9 @@ try {
     if (prm.getDefault("mu_g", false)) { mu_g(pvtCC, cellID); }
     if (prm.getDefault("Bo"  , false)) { Bo  (pvtCC, cellID); }
     if (prm.getDefault("mu_o", false)) { mu_o(pvtCC, cellID); }
+
+    if (prm.getDefault("rvSat", false)) { rvSat(pvtCC, cellID); }
+    if (prm.getDefault("rsSat", false)) { rsSat(pvtCC, cellID); }
 }
 catch (const std::exception& e) {
     std::cerr << "Caught Exception: " << e.what() << '\n';
