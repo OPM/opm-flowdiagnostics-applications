@@ -218,27 +218,10 @@ public:
                 const Opm::ECLUnits::UnitSystem& usys) const override
     {
         if (curve == ::Opm::ECLPVT::RawCurve::SaturatedState) {
-            return this->saturatedState(usys);
+            return this->saturatedStateCurve(usys);
         }
 
-        auto curves = this->interp_.getPvtCurve(curve);
-
-        const auto x_unit = usys.vaporisedOilGasRat();
-        const auto y_unit = (curve == ::Opm::ECLPVT::RawCurve::FVF)
-            ? (usys.reservoirVolume() / usys.surfaceVolumeGas())
-            : usys.viscosity();
-
-        for (auto& curve : curves) {
-            auto& x = curve.first;
-            auto& y = curve.second;
-
-            for (auto n = x.size(), i = 0*n; i < n; ++i) {
-                x[i] = ::Opm::unit::convert::to(x[i], x_unit);
-                y[i] = ::Opm::unit::convert::to(y[i], y_unit);
-            }
-        }
-
-        return std::move(curves);
+        return this->mainPvtCurve(curve, usys);
     }
 
     virtual std::unique_ptr<PVxGBase> clone() const override
@@ -253,11 +236,39 @@ private:
     TableInterpolant    interp_;
 
     std::vector<Opm::FlowDiagnostics::Graph>
-    saturatedState(const Opm::ECLUnits::UnitSystem& usys) const;
+    mainPvtCurve(const Opm::ECLPVT::RawCurve      curve,
+                 const Opm::ECLUnits::UnitSystem& usys) const;
+
+    std::vector<Opm::FlowDiagnostics::Graph>
+    saturatedStateCurve(const Opm::ECLUnits::UnitSystem& usys) const;
 };
 
 std::vector<Opm::FlowDiagnostics::Graph>
-WetGas::saturatedState(const Opm::ECLUnits::UnitSystem& usys) const
+WetGas::mainPvtCurve(const Opm::ECLPVT::RawCurve      curve,
+                     const Opm::ECLUnits::UnitSystem& usys) const
+{
+    auto curves = this->interp_.getPvtCurve(curve);
+
+    const auto x_unit = usys.vaporisedOilGasRat();
+    const auto y_unit = (curve == ::Opm::ECLPVT::RawCurve::FVF)
+        ? (usys.reservoirVolume() / usys.surfaceVolumeGas())
+        : usys.viscosity();
+
+    for (auto& crv : curves) {
+        auto& x = crv.first;
+        auto& y = crv.second;
+
+        for (auto n = x.size(), i = 0*n; i < n; ++i) {
+            x[i] = ::Opm::unit::convert::to(x[i], x_unit);
+            y[i] = ::Opm::unit::convert::to(y[i], y_unit);
+        }
+    }
+
+    return curves;
+}
+
+std::vector<Opm::FlowDiagnostics::Graph>
+WetGas::saturatedStateCurve(const Opm::ECLUnits::UnitSystem& usys) const
 {
     const auto key_unit = usys.pressure();
     const auto rv_unit  = usys.vaporisedOilGasRat();
