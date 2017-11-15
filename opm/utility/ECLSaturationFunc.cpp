@@ -94,6 +94,29 @@ namespace {
 
         return satnum;
     }
+
+    Opm::FlowDiagnostics::Graph
+    transformOilCurve(const Opm::FlowDiagnostics::Graph& curve,
+                      const double                       So_offset)
+    {
+        auto Sx = std::vector<double>{};  Sx.reserve(curve.first.size());
+        {
+            const auto& So = curve.first;
+
+            std::transform(So.rbegin(), So.rend(), std::back_inserter(Sx),
+                           [So_offset](const double so)
+                           {
+                               return So_offset - so;
+                           });
+        }
+
+        auto y = std::vector<double>{
+            curve.second.rbegin(),
+            curve.second.rend()
+        };
+
+        return { std::move(Sx), std::move(y) };
+    }
 } // Anonymous
 
 // =====================================================================
@@ -1300,10 +1323,15 @@ getSatFuncCurve(const std::vector<RawCurve>& func,
                     .reset(new ECLRegionMapping(this->satnum_, subset));
             }
 
-            auto kro = this->kroCurve(*oil_assoc.second, regID,
-                                      fi.subsys, oil_assoc.first, useEPS);
+            const auto kro =
+                this->kroCurve(*oil_assoc.second, regID,
+                               fi.subsys, oil_assoc.first, useEPS);
 
-            graph.push_back(std::move(kro));
+            const auto So_off = (fi.subsys == RawCurve::SubSystem::OilGas)
+                ? oil_assoc.first.back() // Sg = Max{So} - So in G/O system
+                : 1.0;                   // Sw = 1.0 - So     in O/W system
+
+            graph.push_back(transformOilCurve(kro, So_off));
         }
         break;
 
