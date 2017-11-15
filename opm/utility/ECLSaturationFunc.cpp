@@ -110,12 +110,10 @@ namespace {
                            });
         }
 
-        auto y = std::vector<double>{};  y.reserve(curve.second.size());
-        {
-            const auto& val = curve.second;
-
-            std::copy(val.rbegin(), val.rend(), std::back_inserter(y));
-        }
+        auto y = std::vector<double>{
+            curve.second.rbegin(),
+            curve.second.rend()
+        };
 
         return { std::move(Sx), std::move(y) };
     }
