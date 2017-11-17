@@ -155,6 +155,53 @@ namespace {
     }
 
     // -----------------------------------------------------------------
+    // Capillary pressure
+
+    void pcgo(const Opm::ECLSaturationFunc& sfunc,
+              const int                     activeCell,
+              const bool                    useEPS)
+    {
+        using RC = Opm::ECLSaturationFunc::RawCurve;
+
+        auto func = std::vector<RC>{};
+        func.reserve(1);
+
+        // Request pcgo (gas/oil capillary pressure (Pg-Po) in G/O system)
+        func.push_back(RC{
+            RC::Function::CapPress,
+            RC::SubSystem::OilGas,
+            Opm::ECLPhaseIndex::Vapour
+        });
+
+        const auto graph =
+            sfunc.getSatFuncCurve(func, activeCell, useEPS);
+
+        printGraph(std::cout, "pcgo", graph);
+    }
+
+    void pcow(const Opm::ECLSaturationFunc& sfunc,
+              const int                     activeCell,
+              const bool                    useEPS)
+    {
+        using RC = Opm::ECLSaturationFunc::RawCurve;
+
+        auto func = std::vector<RC>{};
+        func.reserve(1);
+
+        // Request pcow (oil/water capillary pressure (Po-Pw) in O/W system)
+        func.push_back(RC{
+            RC::Function::CapPress,
+            RC::SubSystem::OilWater,
+            Opm::ECLPhaseIndex::Aqua
+        });
+
+        const auto graph =
+            sfunc.getSatFuncCurve(func, activeCell, useEPS);
+
+        printGraph(std::cout, "pcow", graph);
+    }
+
+    // -----------------------------------------------------------------
     // PVT Curves
 
     void Bg(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCurves,
@@ -248,6 +295,11 @@ try {
     if (prm.getDefault("krog", false)) { krog(sfunc, cellID, useEPS); }
     if (prm.getDefault("krow", false)) { krow(sfunc, cellID, useEPS); }
     if (prm.getDefault("krw" , false)) { krw (sfunc, cellID, useEPS); }
+
+    // -----------------------------------------------------------------
+    // Capillary pressure
+    if (prm.getDefault("pcgo", false)) { pcgo(sfunc, cellID, useEPS); }
+    if (prm.getDefault("pcow", false)) { pcow(sfunc, cellID, useEPS); }
 
     // -----------------------------------------------------------------
     // PVT Curves
