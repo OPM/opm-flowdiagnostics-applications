@@ -66,7 +66,7 @@ namespace Opm { namespace ECLPVT {
         /// \param[in] phase Phase for which to compute extract graph
         ///    representation of PVT property function.
         ///
-        /// \param[in] activeCell Index of particular active cell in model..
+        /// \param[in] activeCell Index of particular active cell in model.
         ///
         /// \return Collection of 2D graphs for PVT property curve
         ///    identified by requests represented by \p curve, \p phase and
@@ -90,6 +90,45 @@ namespace Opm { namespace ECLPVT {
         getPvtCurve(const RawCurve      curve,
                     const ECLPhaseIndex phase,
                     const int           activeCell) const;
+
+        /// Compute a single dynamic property in a single active cell for a
+        /// collection of cell states.
+        ///
+        /// \param[in] property Named property.  Must be one of \code
+        ///    RawCurve::FVF \endcode or \code RawCurve::Viscosity \endcode.
+        ///    All other values return an empty result.
+        ///
+        /// \param[in] phase Phase for which to compute the property value.
+        ///    Must be \code ECLPhaseIndex::Vapour \endcode or \code
+        ///    ECLPhaseIndex::Liquid \endcode.  All other values return an
+        ///    empty result.
+        ///
+        /// \param[in] activeCell Index of particular active cell in model.
+        ///
+        /// \param[in] phasePress Sequence of phase pressure values
+        ///    pertaining to \p activeCell.  Could, for instance, be the
+        ///    entire time-series of oil pressure values in that cell.
+        ///
+        /// \param[in] mixRatio Sequence of phase mixing ratio values
+        ///    pertaining to \p activeCell.  Could, for instance, be the
+        ///    entire time-series of dissolved gas/oil ratio values in that
+        ///    cell.  Must be empty or match the size of \p phasePress.  If
+        ///    empty, treated as \code
+        ///    std::vector<double>(phasePress.size(), 0.0) \endcode which is
+        ///    typically appropriate only for dry gas or dead oil cases.
+        ///
+        /// \return Sequence of dynamic property values corresponding to the
+        ///    requested property name of the identified phase in the
+        ///    particular active cell.  Empty for invalid requests, number
+        ///    of elements equal to \code phasePress.size() \endcode
+        ///    otherwise.
+        std::vector<double>
+        getDynamicProperty(const RawCurve             property,
+                           const ECLPhaseIndex        phase,
+                           const int                  activeCell,
+                           const std::vector<double>& phasePress,
+                           const std::vector<double>& mixRatio
+                               = std::vector<double>()) const;
 
     private:
         /// Forward map: Cell -> PVT Region ID

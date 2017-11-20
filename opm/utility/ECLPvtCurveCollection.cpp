@@ -21,8 +21,11 @@
 
 #include <opm/utility/ECLResultData.hpp>
 
+#include <cassert>
 #include <initializer_list>
 #include <vector>
+
+#include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <ert/ecl/ecl_kw_magic.h>
 
@@ -70,6 +73,102 @@ namespace {
         // Return empty.
         return emptyFDGraph();
     }
+
+    std::vector<double>
+    fromSI(std::vector<double>&& x, const double x_scale)
+    {
+        for (auto& xi : x) {
+            xi = Opm::unit::convert::to(xi, x_scale);
+        }
+
+        return x;
+    }
+
+    template <class PVTInterp, class Pressure, class MixRatio>
+    std::vector<double>
+    formationVolumeFactor(const PVTInterp& pvt,
+                          const int        regID,
+                          const Pressure&  press,
+                          const MixRatio&  R,
+                          const double     fvfScale)
+    {
+        return fromSI(pvt.formationVolumeFactor(regID, R, press), fvfScale);
+    }
+
+    template <class PVTInterp, class Pressure, class MixRatio>
+    std::vector<double>
+    viscosity(const PVTInterp& pvt,
+              const int        regID,
+              const Pressure&  press,
+              const MixRatio&  R,
+              const double     muScale)
+    {
+        return fromSI(pvt.viscosity(regID, R, press), muScale);
+    }
+
+    std::vector<double>
+    gasProperty(const std::shared_ptr<Opm::ECLPVT::Gas>& pvt,
+                const Opm::ECLPVT::RawCurve              property,
+                const int                                regID,
+                const std::vector<double>&               Pg,
+                const std::vector<double>&               Rv,
+                const Opm::ECLUnits::UnitSystem&         usys)
+    {
+        if (pvt == nullptr) {
+            // Nu such property interpolant.  Return empty.
+            return {};
+        }
+
+        assert ((property == Opm::ECLPVT::RawCurve::FVF) ||
+                (property == Opm::ECLPVT::RawCurve::Viscosity));
+
+        const auto pg = Opm::ECLPVT::Gas::GasPressure { Pg };
+        auto       rv = Opm::ECLPVT::Gas::VaporizedOil{ Rv };
+        if (rv.data.empty()) {
+            rv.data.assign(pg.data.size(), 0.0);
+        }
+
+        if (property == Opm::ECLPVT::RawCurve::FVF) {
+            const auto fvfScale = usys.reservoirVolume()
+                / usys.surfaceVolumeGas();
+
+            return formationVolumeFactor(*pvt, regID, pg, rv, fvfScale);
+        }
+
+        return viscosity(*pvt, regID, pg, rv, usys.viscosity());
+    }
+
+    std::vector<double>
+    oilProperty(const std::shared_ptr<Opm::ECLPVT::Oil>& pvt,
+                const Opm::ECLPVT::RawCurve              property,
+                const int                                regID,
+                const std::vector<double>&               Po,
+                const std::vector<double>&               Rs,
+                const Opm::ECLUnits::UnitSystem&         usys)
+    {
+        if (pvt == nullptr) {
+            // Nu such property interpolant.  Return empty.
+            return {};
+        }
+
+        assert ((property == Opm::ECLPVT::RawCurve::FVF) ||
+                (property == Opm::ECLPVT::RawCurve::Viscosity));
+
+        const auto po = Opm::ECLPVT::Oil::OilPressure { Po };
+        auto       rs = Opm::ECLPVT::Oil::DissolvedGas{ Rs };
+        if (rs.data.empty()) {
+            rs.data.assign(po.data.size(), 0.0);
+        }
+
+        if (property == Opm::ECLPVT::RawCurve::FVF) {
+            const auto fvfScale = usys.reservoirVolume()
+                / usys.surfaceVolumeLiquid();
+
+            return formationVolumeFactor(*pvt, regID, po, rs, fvfScale);
+        }
+
+        return viscosity(*pvt, regID, po, rs, usys.viscosity());
+    }
 }
 
 Opm::ECLPVT::ECLPvtCurveCollection::
@@ -111,4 +210,45 @@ getPvtCurve(const RawCurve      curve,
 
     // Call requests gas properties.
     return rawPvtCurve(this->gas_, curve, regID, *this->usys_);
+}
+
+std::vector<double>
+Opm::ECLPVT::ECLPvtCurveCollection::
+getDynamicProperty(const RawCurve             property,
+                   const ECLPhaseIndex        phase,
+                   const int                  activeCell,
+                   const std::vector<double>& phasePress,
+                   const std::vector<double>& mixRatio) const
+{
+    if (phase == ECLPhaseIndex::Aqua) {
+        // Not supported at this time.
+        // Return empty.
+        return {};
+    }
+
+    if (property == RawCurve::SaturatedState) {
+        // Not a supported request.  Return empty.
+        return {};
+    }
+
+    if (static_cast<decltype(this->pvtnum_.size())>(activeCell)
+        >= this->pvtnum_.size())
+    {
+        // Active cell index out of bounds.  Return empty.
+        return {};
+    }
+
+    // PVTNUM is traditional one-based region identifier.  Subtract one to
+    // form valid index into std::vector<>s.
+    const auto regID = this->pvtnum_[activeCell] - 1;
+
+    if (phase == ECLPhaseIndex::Liquid) {
+        // Caller requests oil properties.
+        return oilProperty(this->oil_, property, regID,
+                           phasePress, mixRatio, *this->usys_);
+    }
+
+    // Call requests gas properties.
+    return gasProperty(this->gas_, property, regID,
+                       phasePress, mixRatio, *this->usys_);
 }
