@@ -54,6 +54,7 @@ list (APPEND EXAMPLE_SOURCE_FILES
         examples/computePhaseFluxes.cpp
         examples/computeToFandTracers.cpp
         examples/computeTracers.cpp
+        examples/dynamicCellProperty.cpp
         examples/extractFromRestart.cpp
         examples/extractPropCurves.cpp
         tests/runAcceptanceTest.cpp
