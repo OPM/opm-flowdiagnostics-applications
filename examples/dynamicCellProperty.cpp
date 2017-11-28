@@ -67,10 +67,6 @@ CellState::CellState(const Opm::ECLGraph&                    G,
                      const int                               cellID_)
     : cellID(cellID_)
 {
-    const auto u_press = &Opm::ECLUnits::UnitSystem::pressure;
-    const auto u_Rs    = &Opm::ECLUnits::UnitSystem::dissolvedGasOilRat;
-    const auto u_Rv    = &Opm::ECLUnits::UnitSystem::vaporisedOilGasRat;
-
     const auto rsteps = rset.reportStepIDs();
 
     this->time.reserve(rsteps.size());
@@ -88,20 +84,22 @@ CellState::CellState(const Opm::ECLGraph&                    G,
         this->time.push_back(example::simulationTime(*rstrt));
 
         {
-            const auto& Po =
-                G.linearisedCellData(*rstrt, "PRESSURE", u_press);
+            const auto& press =
+                G.rawLinearisedCellData<double>(*rstrt, "PRESSURE");
 
-            this->Po.push_back(Po[cellID]);
+            this->Po.push_back(press[cellID]);
         }
 
         {
-            const auto& R = G.linearisedCellData(*rstrt, "RS", u_Rs);
+            const auto& R =
+                G.rawLinearisedCellData<double>(*rstrt, "RS");
 
             this->Rs.push_back(R.empty() ? 0.0 : R[cellID]);
         }
 
         {
-            const auto& R = G.linearisedCellData(*rstrt, "RV", u_Rv);
+            const auto& R =
+                G.rawLinearisedCellData<double>(*rstrt, "RV");
 
             this->Rv.push_back(R.empty() ? 0.0 : R[cellID]);
         }
@@ -126,8 +124,8 @@ namespace {
         using RC = Opm::ECLPVT::RawCurve;
         using PI = Opm::ECLPhaseIndex;
 
-        return pvtCC.getDynamicProperty(RC::FVF, PI::Vapour,
-                                        x.cellID, x.Po, x.Rv);
+        return pvtCC.getDynamicPropertyNative(RC::FVF, PI::Vapour,
+                                              x.cellID, x.Po, x.Rv);
     }
 
     std::vector<double>
@@ -137,8 +135,8 @@ namespace {
         using RC = Opm::ECLPVT::RawCurve;
         using PI = Opm::ECLPhaseIndex;
 
-        return pvtCC.getDynamicProperty(RC::Viscosity, PI::Vapour,
-                                        x.cellID, x.Po, x.Rv);
+        return pvtCC.getDynamicPropertyNative(RC::Viscosity, PI::Vapour,
+                                              x.cellID, x.Po, x.Rv);
     }
 
     // -----------------------------------------------------------------------
@@ -151,8 +149,8 @@ namespace {
         using RC = Opm::ECLPVT::RawCurve;
         using PI = Opm::ECLPhaseIndex;
 
-        return pvtCC.getDynamicProperty(RC::FVF, PI::Liquid,
-                                        x.cellID, x.Po, x.Rs);
+        return pvtCC.getDynamicPropertyNative(RC::FVF, PI::Liquid,
+                                              x.cellID, x.Po, x.Rs);
     }
 
     std::vector<double>
@@ -162,9 +160,12 @@ namespace {
         using RC = Opm::ECLPVT::RawCurve;
         using PI = Opm::ECLPhaseIndex;
 
-        return pvtCC.getDynamicProperty(RC::Viscosity, PI::Liquid,
-                                        x.cellID, x.Po, x.Rs);
+        return pvtCC.getDynamicPropertyNative(RC::Viscosity, PI::Liquid,
+                                              x.cellID, x.Po, x.Rs);
     }
+
+    // ---------------------------------------------------------------------
+    // Command-line argument processing and property output.
 
     using DynProp = std::vector<double>
         (*)(const Opm::ECLPVT::ECLPvtCurveCollection& pvtCC,
@@ -202,6 +203,36 @@ namespace {
             writeVector(prop.data, prop.name);
         }
     }
+
+    std::unique_ptr<const Opm::ECLUnits::UnitSystem>
+    makeUnits(const std::string&          unit,
+              const Opm::ECLInitFileData& init)
+    {
+        if ((unit == "si") || (unit == "SI") || (unit == "internal")) {
+            return {};          // No conversion needed.
+        }
+
+        if ((unit == "metric") || (unit == "Metric") || (unit == "METRIC")) {
+            return Opm::ECLUnits::metricUnitConventions();
+        }
+
+        if ((unit == "field") || (unit == "Field") || (unit == "FIELD")) {
+            return Opm::ECLUnits::fieldUnitConventions();
+        }
+
+        if ((unit == "lab") || (unit == "Lab") || (unit == "LAB")) {
+            return Opm::ECLUnits::labUnitConventions();
+        }
+
+        if ((unit == "pvt-m") || (unit == "PVT-M") || (unit == "PVTM")) {
+            return Opm::ECLUnits::pvtmUnitConventions();
+        }
+
+        std::cerr << "Unit convention '" << unit << "' not recognized\n"
+                  << "Using 'native' (input/serialised) conventions.\n";
+
+        return Opm::ECLUnits::serialisedUnitConventions(init);
+    }
 } // namespace Anonymous
 
 int main(int argc, char* argv[])
@@ -212,7 +243,11 @@ try {
     const auto rset  = example::identifyResultSet(prm);
     const auto init  = Opm::ECLInitFileData(rset.initFile());
     const auto graph = Opm::ECLGraph::load(rset.gridFile(), init);
-    const auto pvtCC = Opm::ECLPVT::ECLPvtCurveCollection(graph, init);
+
+    auto pvtCC = Opm::ECLPVT::ECLPvtCurveCollection(graph, init);
+    if (prm.has("unit")) {
+        pvtCC.setOutputUnits(makeUnits(prm.get<std::string>("unit"), init));
+    }
 
     const auto x = CellState{ graph, rset, cellID };
 
