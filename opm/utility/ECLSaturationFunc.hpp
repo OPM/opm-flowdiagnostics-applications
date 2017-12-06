@@ -22,6 +22,7 @@
 
 #include <opm/flowdiagnostics/DerivedQuantities.hpp>
 #include <opm/utility/ECLPhaseIndex.hpp>
+#include <opm/utility/ECLUnitHandling.hpp>
 
 #include <memory>
 #include <vector>
@@ -136,6 +137,21 @@ namespace Opm {
         ///
         /// \return \code *this \endcode.
         ECLSaturationFunc& operator=(const ECLSaturationFunc& rhs);
+
+        /// Define a collection of units of measure for output purposes.
+        ///
+        /// Capillary pressure curves produced by getSatFuncCurve() will be
+        /// reported in the pressure units of this system.  If this function
+        /// is never called (or called with null pointer), then the output
+        /// units are implicitly set to the flow-diagnostics module's
+        /// internal units of measurement (meaning all properties and curves
+        /// will be reported in strict SI units).
+        ///
+        /// \param[in] usys Collection of units of measure for output
+        ///    purposes.  Typically the return value from one of the \code
+        ///    *UnitConvention() \endcode functions of the \code ECLUnits
+        ///    \endcode namespace.
+        void setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys);
 
         /// Compute relative permeability values in all active cells for a
         /// single phase.
