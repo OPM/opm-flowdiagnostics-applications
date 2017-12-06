@@ -25,6 +25,7 @@
 
 #include <opm/utility/ECLEndPointScaling.hpp>
 #include <opm/utility/ECLGraph.hpp>
+#include <opm/utility/ECLPropertyUnitConversion.hpp>
 #include <opm/utility/ECLPropTable.hpp>
 #include <opm/utility/ECLRegionMapping.hpp>
 #include <opm/utility/ECLResultData.hpp>
@@ -686,6 +687,8 @@ public:
               const ECLInitFileData& init,
               const bool             useEPS);
 
+    void setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys);
+
     std::vector<double>
     relperm(const ECLGraph&             G,
             const ECLRestartData&       rstrt,
@@ -1093,11 +1096,15 @@ private:
 
     ECLRegionMapping rmap_;
 
-    std::unique_ptr<Oil::KrFunction>    oil_;
-    std::unique_ptr<Gas::SatFunction>   gas_;
-    std::unique_ptr<Water::SatFunction> wat_;
+    std::unique_ptr<const ECLUnits::UnitSystem> usys_internal_{nullptr};
 
-    std::unique_ptr<EPSEvaluator> eps_;
+    std::unique_ptr<Oil::KrFunction>    oil_{nullptr};
+    std::unique_ptr<Gas::SatFunction>   gas_{nullptr};
+    std::unique_ptr<Water::SatFunction> wat_{nullptr};
+
+    std::unique_ptr<EPSEvaluator> eps_{nullptr};
+
+    std::unique_ptr<const ECLUnits::UnitSystem> usys_output_{nullptr};
 
     void initRelPermInterp(const EPSEvaluator::ActPh& active,
                            const ECLInitFileData&     init,
@@ -1224,18 +1231,48 @@ private:
 
 Opm::ECLSaturationFunc::Impl::Impl(const ECLGraph&        G,
                                    const ECLInitFileData& init)
-    : satnum_(satnumVector(G, init))
-    , rmap_  (satnum_)
-{
-}
+    : satnum_       (satnumVector(G, init))
+    , rmap_         (satnum_)
+    , usys_internal_(ECLUnits::internalUnitConventions())
+{}
 
 Opm::ECLSaturationFunc::Impl::Impl(Impl&& rhs)
-    : satnum_(std::move(rhs.satnum_))
-    , rmap_  (std::move(rhs.rmap_))
-    , oil_   (std::move(rhs.oil_ ))
-    , gas_   (std::move(rhs.gas_ ))
-    , wat_   (std::move(rhs.wat_ ))
+    : satnum_       (std::move(rhs.satnum_))
+    , rmap_         (std::move(rhs.rmap_))
+    , usys_internal_(std::move(rhs.usys_internal_))
+    , oil_          (std::move(rhs.oil_))
+    , gas_          (std::move(rhs.gas_))
+    , wat_          (std::move(rhs.wat_))
+    , eps_          (std::move(rhs.eps_))
+    , usys_output_  (std::move(rhs.usys_output_))
 {}
+
+Opm::ECLSaturationFunc::Impl::Impl(const Impl& rhs)
+    : satnum_       (rhs.satnum_)
+    , rmap_         (rhs.rmap_)
+    , usys_internal_(rhs.usys_internal_->clone())
+{
+    if (rhs.oil_) {
+        // Polymorphic object must use clone().
+        this->oil_ = rhs.oil_->clone();
+    }
+
+    if (rhs.gas_) {
+        this->gas_.reset(new Gas::SatFunction(*rhs.gas_));
+    }
+
+    if (rhs.wat_) {
+        this->wat_.reset(new Water::SatFunction(*rhs.wat_));
+    }
+
+    if (rhs.eps_) {
+        this->eps_.reset(new EPSEvaluator(*rhs.eps_));
+    }
+
+    if (rhs.usys_output_) {
+        this->usys_output_ = rhs.usys_output_->clone();
+    }
+}
 
 // ---------------------------------------------------------------------
 
@@ -1333,24 +1370,12 @@ Impl::initEPS(const EPSEvaluator::ActPh& active,
 
 // #####################################################################
 
-Opm::ECLSaturationFunc::Impl::Impl(const Impl& rhs)
-    : rmap_(rhs.rmap_)
+void
+Opm::ECLSaturationFunc::Impl::
+setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys)
 {
-    if (rhs.oil_) {
-        // Polymorphic object must use clone().
-        this->oil_ = rhs.oil_->clone();
-    }
-
-    if (rhs.gas_) {
-        this->gas_.reset(new Gas::SatFunction(*rhs.gas_));
-    }
-
-    if (rhs.wat_) {
-        this->wat_.reset(new Water::SatFunction(*rhs.wat_));
-    }
+    this->usys_output_ = std::move(usys);
 }
-
-// #####################################################################
 
 std::vector<double>
 Opm::ECLSaturationFunc::Impl::
@@ -1717,7 +1742,13 @@ pcgoCurve(const ECLRegionMapping&    rmap,
 
     // Region ID 'reg' is traditional, ECL-style one-based region ID
     // (SATNUM).  Subtract one to create valid table index.
-    const auto pc = this->gas_->pcgo(regID - 1, sg_inp);
+    auto pc = this->gas_->pcgo(regID - 1, sg_inp);
+
+    if (this->usys_output_ != nullptr) {
+        ::Opm::ECLUnits::Convert::Pressure()
+            .from(*this->usys_internal_)
+            .to  (*this->usys_output_).appliedTo(pc);
+    }
 
     // FD::Graph == pair<vector<double>, vector<double>>
     return FlowDiagnostics::Graph {
@@ -1831,7 +1862,13 @@ pcowCurve(const ECLRegionMapping&    rmap,
 
     // Region ID 'reg' is traditional, ECL-style one-based region ID
     // (SATNUM).  Subtract one to create valid table index.
-    const auto pc = this->wat_->pcow(regID - 1, sw_inp);
+    auto pc = this->wat_->pcow(regID - 1, sw_inp);
+
+    if (this->usys_output_ != nullptr) {
+        ::Opm::ECLUnits::Convert::Pressure()
+            .from(*this->usys_internal_)
+            .to  (*this->usys_output_).appliedTo(pc);
+    }
 
     // FD::Graph == pair<vector<double>, vector<double>>
     return FlowDiagnostics::Graph {
@@ -1974,6 +2011,13 @@ Opm::ECLSaturationFunc::operator=(const ECLSaturationFunc& rhs)
     this->pImpl_.reset(new Impl(*rhs.pImpl_));
 
     return *this;
+}
+
+void
+Opm::ECLSaturationFunc::
+setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys)
+{
+    this->pImpl_->setOutputUnits(std::move(usys));
 }
 
 std::vector<double>
