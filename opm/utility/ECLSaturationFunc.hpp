@@ -21,6 +21,7 @@
 #define OPM_ECLSATURATIONFUNC_HEADER_INCLUDED
 
 #include <opm/flowdiagnostics/DerivedQuantities.hpp>
+#include <opm/utility/ECLEndPointScaling.hpp>
 #include <opm/utility/ECLPhaseIndex.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 
@@ -78,6 +79,9 @@ namespace Opm {
             ECLPhaseIndex thisPh;
         };
 
+        using InvalidEPBehaviour = ::Opm::SatFunc::
+            EPSEvalInterface::InvalidEndpointBehaviour;
+
         /// Constructor
         ///
         /// \param[in] G Connected topology of current model's active cells.
@@ -97,9 +101,18 @@ namespace Opm {
         ///
         ///    Default value (\c true) means that effects of EPS are
         ///    included if requisite data is present in the INIT result.
-        ECLSaturationFunc(const ECLGraph&        G,
-                          const ECLInitFileData& init,
-                          const bool             useEPS = true);
+        ///
+        /// \param[in] invalidIsUnscaled Whether or not treat invalid scaled
+        ///    saturation end-points (e.g., SWL=-1.0E+20) as unscaled
+        ///    saturations.  True for "treat as unscaled", false for "
+        ///
+        ///    Default value (\c true) means that invalid scalings are
+        ///    treated as unscaled, false
+        ECLSaturationFunc(const ECLGraph&          G,
+                          const ECLInitFileData&   init,
+                          const bool               useEPS = true,
+                          const InvalidEPBehaviour handle_invalid
+                          = InvalidEPBehaviour::UseUnscaled);
 
         /// Destructor.
         ~ECLSaturationFunc();
