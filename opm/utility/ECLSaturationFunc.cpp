@@ -683,9 +683,10 @@ public:
     Impl(Impl&& rhs);
     Impl(const Impl& rhs);
 
-    void init(const ECLGraph&        G,
-              const ECLInitFileData& init,
-              const bool             useEPS);
+    void init(const ECLGraph&          G,
+              const ECLInitFileData&   init,
+              const bool               useEPS,
+              const InvalidEPBehaviour handle_invalid);
 
     void setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys);
 
@@ -719,14 +720,16 @@ private:
             bool wat;
         };
 
-        void define(const ECLGraph&        G,
-                    const ECLInitFileData& init,
-                    const RawTEP&          ep,
-                    const bool             use3PtScaling,
-                    const ActPh&           active)
+        void define(const ECLGraph&          G,
+                    const ECLInitFileData&   init,
+                    const RawTEP&            ep,
+                    const bool               use3PtScaling,
+                    const ActPh&             active,
+                    const InvalidEPBehaviour handle_invalid)
         {
             auto opt = Create::EPSOptions{};
-            opt.use3PtScaling = use3PtScaling;
+            opt.use3PtScaling  = use3PtScaling;
+            opt.handle_invalid = handle_invalid;
 
             if (active.oil) {
                 this->create_oil_eps(G, init, ep, active, opt);
@@ -1113,7 +1116,8 @@ private:
     void initEPS(const EPSEvaluator::ActPh& active,
                  const bool                 use3PtScaling,
                  const ECLGraph&            G,
-                 const ECLInitFileData&     init);
+                 const ECLInitFileData&     init,
+                 const InvalidEPBehaviour   handle_invalid);
 
     std::vector<double>
     kro(const ECLGraph&       G,
@@ -1277,9 +1281,10 @@ Opm::ECLSaturationFunc::Impl::Impl(const Impl& rhs)
 // ---------------------------------------------------------------------
 
 void
-Opm::ECLSaturationFunc::Impl::init(const ECLGraph&        G,
-                                   const ECLInitFileData& init,
-                                   const bool             useEPS)
+Opm::ECLSaturationFunc::Impl::init(const ECLGraph&          G,
+                                   const ECLInitFileData&   init,
+                                   const bool               useEPS,
+                                   const InvalidEPBehaviour handle_invalid)
 {
     // Extract INTEHEAD from main grid
     const auto& ih   = init.keywordData<int>(INTEHEAD_KW);
@@ -1300,7 +1305,7 @@ Opm::ECLSaturationFunc::Impl::init(const ECLGraph&        G,
                 lh[LOGIHEAD_ALT_ENDPOINT_SCALING_INDEX]);
 
             // Must be called *after* initRelPermInterp().
-            this->initEPS(active, use3PtScaling, G, init);
+            this->initEPS(active, use3PtScaling, G, init, handle_invalid);
         }
     }
 }
@@ -1359,13 +1364,14 @@ void Opm::ECLSaturationFunc::
 Impl::initEPS(const EPSEvaluator::ActPh& active,
               const bool                 use3PtScaling,
               const ECLGraph&            G,
-              const ECLInitFileData&     init)
+              const ECLInitFileData&     init,
+              const InvalidEPBehaviour   handle_invalid)
 {
     const auto ep = this->extractRawTableEndPoints(active);
 
     this->eps_.reset(new EPSEvaluator());
 
-    this->eps_->define(G, init, ep, use3PtScaling, active);
+    this->eps_->define(G, init, ep, use3PtScaling, active, handle_invalid);
 }
 
 // #####################################################################
@@ -1978,12 +1984,13 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const
 // =====================================================================
 
 Opm::ECLSaturationFunc::
-ECLSaturationFunc(const ECLGraph&        G,
-                  const ECLInitFileData& init,
-                  const bool             useEPS)
+ECLSaturationFunc(const ECLGraph&          G,
+                  const ECLInitFileData&   init,
+                  const bool               useEPS,
+                  const InvalidEPBehaviour handle_invalid)
     : pImpl_(new Impl(G, init))
 {
-    this->pImpl_->init(G, init, useEPS);
+    this->pImpl_->init(G, init, useEPS, handle_invalid);
 }
 
 Opm::ECLSaturationFunc::~ECLSaturationFunc()
