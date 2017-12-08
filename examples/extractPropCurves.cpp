@@ -64,6 +64,34 @@ namespace {
         os.precision(oprec);
     }
 
+    template <class OStream>
+    void printGraph(OStream&                                  os,
+                    const std::string&                        name,
+                    const std::vector<Opm::ECLPVT::PVTGraph>& graphs)
+    {
+        const auto oprec  = os.precision(16);
+        const auto oflags = os.setf(std::ios_base::scientific);
+
+        auto k = 1;
+        for (const auto& graph : graphs) {
+            const auto& p = graph.press;
+            const auto& R = graph.mixRat;
+            const auto& f = graph.value;
+
+            os << name << '{' << k << "} = [\n";
+
+            for (auto n = p.size(), i = 0*n; i < n; ++i) {
+                os << p[i] << ' ' << R[i] << ' ' << f[i] << '\n';
+            }
+
+            os << "];\n\n";
+            k += 1;
+        }
+
+        os.setf(oflags);
+        os.precision(oprec);
+    }
+
     // -----------------------------------------------------------------
     // Relative permeability
 
