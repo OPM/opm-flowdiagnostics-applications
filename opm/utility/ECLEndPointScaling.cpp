@@ -28,6 +28,7 @@
 #include <opm/utility/ECLResultData.hpp>
 
 #include <cassert>
+#include <cmath>
 #include <exception>
 #include <initializer_list>
 #include <iterator>
@@ -241,8 +242,12 @@ handleInvalidEndpoint(const SaturationAssoc& sp,
         return;
     }
 
-    // Nothing to do for IgnorePoint.  In particular, we must not change the
-    // contents or the size of effsat.
+    if (this->handle_invalid_ == InvalidEndpointBehaviour::IgnorePoint) {
+        // User requests that invalid scaling be ignored.  Signal invalid
+        // scaled saturation to caller as NaN.
+        effsat.push_back(std::nan(""));
+        return;
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -408,8 +413,12 @@ handleInvalidEndpoint(const SaturationAssoc& sp,
         return;
     }
 
-    // Nothing to do for IgnorePoint.  In particular, we must not change the
-    // contents or the size of effsat.
+    if (this->handle_invalid_ == InvalidEndpointBehaviour::IgnorePoint) {
+        // User requests that invalid scaling be ignored.  Signal invalid
+        // scaled saturation to caller as NaN.
+        effsat.push_back(std::nan(""));
+        return;
+    }
 }
 
 // ---------------------------------------------------------------------
