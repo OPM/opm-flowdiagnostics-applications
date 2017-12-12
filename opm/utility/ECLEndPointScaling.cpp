@@ -197,6 +197,12 @@ Impl::reverse(const TableEndPoints&   tep,
         const auto sLO = this->smin_[cell];
         const auto sHI = this->smax_[cell];
 
+        if (! validSaturations({ sLO, sHI })) {
+            this->handleInvalidEndpoint(eval_pt, unscaledsat);
+
+            continue;
+        }
+
         unscaledsat.push_back(0.0);
         auto& s_unsc = unscaledsat.back();
 
@@ -344,12 +350,18 @@ Impl::reverse(const TableEndPoints&   tep,
     for (const auto& eval_pt : sp) {
         const auto cell = eval_pt.cell;
 
-        unscaledsat.push_back(0.0);
-        auto& s_unsc = unscaledsat.back();
-
         const auto sLO = this->smin_ [cell];
         const auto sR  = this->sdisp_[cell];
         const auto sHI = this->smax_ [cell];
+
+        if (! validSaturations({ sLO, sR, sHI })) {
+            this->handleInvalidEndpoint(eval_pt, unscaledsat);
+
+            continue;
+        }
+
+        unscaledsat.push_back(0.0);
+        auto& s_unsc = unscaledsat.back();
 
         if (! (eval_pt.sat > tep.low)) {
             // s <= minimum tabulated saturation.
