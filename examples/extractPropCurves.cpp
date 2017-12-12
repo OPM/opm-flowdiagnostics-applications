@@ -31,6 +31,7 @@
 #include <array>
 #include <cstddef>
 #include <exception>
+#include <initializer_list>
 #include <iomanip>
 #include <ios>
 #include <iostream>
@@ -338,6 +339,37 @@ namespace {
         return Opm::ECLUnits::serialisedUnitConventions(init);
     }
 
+    Opm::SatFunc::EPSEvalInterface::InvalidEndpointBehaviour
+    handleInvalid(const std::string& behaviour)
+    {
+        using IEB = Opm::SatFunc::
+            EPSEvalInterface::InvalidEndpointBehaviour;
+
+        if ((behaviour == "ignore") ||
+            (behaviour == "ignore-point") ||
+            (behaviour == "ignore_point") ||
+            (behaviour == "ignorepoint"))
+        {
+            return IEB::IgnorePoint;
+        }
+
+        return IEB::UseUnscaled;
+    }
+
+    auto handleInvalid(const Opm::ParameterGroup& prm)
+        -> decltype(handleInvalid("ignore"))
+    {
+        for (const auto* param : { "handle_invalid" ,
+                                   "hInv", "handleInv" })
+        {
+            if (prm.has(param)) {
+                return handleInvalid(prm.get<std::string>(param));
+            }
+        }
+
+        return handleInvalid("ignore");
+    }
+
     int getActiveCell(const Opm::ECLGraph&       G,
                       const Opm::ParameterGroup& prm)
     {
@@ -381,6 +413,7 @@ int main(int argc, char* argv[])
 try {
     const auto prm    = example::initParam(argc, argv);
     const auto useEPS = prm.getDefault("useEPS", false);
+    const auto h_inv  = handleInvalid(prm);
 
     const auto rset  = example::identifyResultSet(prm);
     const auto init  = Opm::ECLInitFileData(rset.initFile());
@@ -388,7 +421,7 @@ try {
 
     const auto cellID = getActiveCell(graph, prm);
 
-    auto sfunc = Opm::ECLSaturationFunc(graph, init, useEPS);
+    auto sfunc = Opm::ECLSaturationFunc(graph, init, useEPS, h_inv);
     auto pvtCC = Opm::ECLPVT::ECLPvtCurveCollection(graph, init);
 
     if (prm.has("unit")) {
