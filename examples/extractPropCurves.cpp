@@ -28,10 +28,12 @@
 #include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLSaturationFunc.hpp>
 
+#include <array>
 #include <cstddef>
 #include <exception>
 #include <iomanip>
 #include <ios>
+#include <iostream>
 #include <vector>
 
 #include <boost/filesystem.hpp>
@@ -335,17 +337,56 @@ namespace {
 
         return Opm::ECLUnits::serialisedUnitConventions(init);
     }
+
+    int getActiveCell(const Opm::ECLGraph&       G,
+                      const Opm::ParameterGroup& prm)
+    {
+        if (prm.has("cell")) { return prm.get<int>("cell"); }
+
+        const auto grid = prm.getDefault("gridName", std::string(""));
+
+        auto ijk = std::array<int,3>{ { 0, 0, 0 } };
+
+        if      (prm.has("I")) { ijk[0] = prm.get<int>("I") - 1; } // 1-based
+        else if (prm.has("i")) { ijk[0] = prm.get<int>("i") - 0; } // 0-based
+
+        if      (prm.has("J")) { ijk[1] = prm.get<int>("J") - 1; } // 1-based
+        else if (prm.has("j")) { ijk[1] = prm.get<int>("j") - 0; } // 0-based
+
+        if      (prm.has("K")) { ijk[2] = prm.get<int>("K") - 1; } // 1-based
+        else if (prm.has("k")) { ijk[2] = prm.get<int>("k") - 0; } // 0-based
+
+        const auto acell = G.activeCell(ijk, grid);
+
+        if (acell < 0) {
+            std::cerr << "Cell ("
+                      << (ijk[0] + 1) << ", "
+                      << (ijk[1] + 1) << ", "
+                      << (ijk[2] + 1) << ") "
+                      << "in "
+                      << (grid.empty()
+                          ? std::string{"Main Grid"}
+                          : "Local Grid: " + grid)
+                      << " is inactive.\n"
+                      << "Using Cell 0 in Main Grid\n";
+
+            return 0;
+        }
+
+        return acell;
+    }
 } // namespace Anonymous
 
 int main(int argc, char* argv[])
 try {
     const auto prm    = example::initParam(argc, argv);
     const auto useEPS = prm.getDefault("useEPS", false);
-    const auto cellID = prm.getDefault("cell", 0);
 
     const auto rset  = example::identifyResultSet(prm);
     const auto init  = Opm::ECLInitFileData(rset.initFile());
     const auto graph = Opm::ECLGraph::load(rset.gridFile(), init);
+
+    const auto cellID = getActiveCell(graph, prm);
 
     auto sfunc = Opm::ECLSaturationFunc(graph, init, useEPS);
     auto pvtCC = Opm::ECLPVT::ECLPvtCurveCollection(graph, init);
