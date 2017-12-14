@@ -221,6 +221,21 @@ namespace Opm
     }
 
 
+    std::vector<double>
+    ECLFluxCalc::massflux(const ECLRestartData& rstrt,
+                      const ECLPhaseIndex   phase) const
+    {
+        // Obtain dynamic data.
+        const auto dyn_data = this->phaseProperties(rstrt, phase);
+
+        // Compute fluxes per connection.
+        const int num_conn = transmissibility_.size();
+        std::vector<double> fluxvec(num_conn);
+        for (int conn = 0; conn < num_conn; ++conn) {
+            fluxvec[conn] = singleMassFlux(conn, dyn_data);
+        }
+        return fluxvec;
+    }
 
 
 
@@ -251,7 +266,32 @@ namespace Opm
         return mob * T * dh;
     }
 
+    double ECLFluxCalc::singleMassFlux(const int connection,
+                                   const DynamicData& dyn_data) const
+    {
+        const int c1 = neighbours_[2*connection];
+        const int c2 = neighbours_[2*connection + 1];
 
+        // Phase pressure in connecting cells.
+        const auto p1 = dyn_data.pressure[c1];
+        const auto p2 = dyn_data.pressure[c2];
+
+        // Phase density at interface: Arith. avg. of cell values.
+        const auto rho =
+            (dyn_data.density[c1] + dyn_data.density[c2]) / 2.0;
+
+        // Phase potential drop across interface.
+        const auto dh = p1 - p2 + rho*this->gravDz_[connection];
+
+        // Phase mobility at interface: Upstream weighting (phase pot).
+        const auto ucell = (dh < 0.0) ? c2 : c1;
+        const auto mob   = dyn_data.mobility[ucell];
+
+        // Background (static) transmissibility.
+        const auto T = this->transmissibility_[connection];
+
+        return dyn_data.density[ucell] * mob * T * dh;
+    }
 
 
 
