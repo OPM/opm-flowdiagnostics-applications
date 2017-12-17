@@ -86,6 +86,8 @@ public:
             {
                 // (1 / B) / (1 / (B * mu))
                 return this->recipFvf(p) / this->recipFvfVisc(p);
+                // NB need to be checked
+                //return this->recipFvfVisc(p);
             });
     }
 
@@ -163,7 +165,7 @@ PVTCurves::PVTCurves(ElemIt               xBegin,
 
     this->recipFvf_     = convert.column[0](*colIt[0]); // 1/Bw
     this->Cw_           = convert.column[1](*colIt[1]); // Cw
-    this->recipFvfVisc_ = convert.column[2](*colIt[2]); // 1/(Bw*mu_w)
+    this->recipFvfVisc_ = convert.column[2](1.0/(*colIt[2])); // 1/(Bw*mu_w)
     this->diffCwCv_     = convert.column[3](*colIt[3]); // Cw - Cv
 
     // Honour requirement that constructor advances column iterators.
