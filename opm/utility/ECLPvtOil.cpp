@@ -40,20 +40,43 @@
 #include <ert/ecl/ecl_kw_magic.h>
 
 namespace {
+    std::function<double(double)>
+    fvf(const Opm::ECLUnits::UnitSystem& usys)
+    {
+        const auto scale = usys.reservoirVolume()
+                / usys.surfaceVolumeLiquid();
+
+        return [scale](const double x) -> double
+        {
+            return Opm::unit::convert::from(x, scale);
+        };
+    }
+
+    std::function<double(double)>
+    viscosity(const Opm::ECLUnits::UnitSystem& usys)
+    {
+        const auto scale = usys.viscosity();
+
+        return [scale](const double x) -> double
+        {
+            return Opm::unit::convert::from(x, scale);
+        };
+    }
+
     ::Opm::ECLPVT::ConvertUnits pvcdoUnitConverter(const int usys)
     {
         using ToSI = ::Opm::ECLPVT::CreateUnitConverter::ToSI;
 
         const auto u = ::Opm::ECLUnits::createUnitSystem(usys);
 
-        // [ Pref, 1/Bo, Co, 1/(Bo*mu_o), Co - Cv ]
+        // [ Pref, Bo, Co, mu_o, Cv ]
 
         return ::Opm::ECLPVT::ConvertUnits {
             ToSI::pressure(*u),
             {
-                ToSI::recipFvf(*u),
+                fvf(*u),
                 ToSI::compressibility(*u),
-                ToSI::recipFvfVisc(*u),
+                viscosity(*u),
                 ToSI::compressibility(*u)
             }
         };
@@ -151,10 +174,7 @@ public:
         return this->evaluate(po, [this](const double p) -> double
             {
                 // (1 / B) / (1 / (B * mu))
-                //return this->recipFvf(p) / this->recipFvfVisc(p);
-                return 1.0/ this->recipFvfVisc(p);
-                //NB need to be checked
-                //return this->recipFvfVisc(p);
+                return this->recipFvf(p) / this->recipFvfVisc(p);
             });
     }
 
@@ -181,24 +201,24 @@ public:
 
 private:
     double po_ref_       { 1.0 };
-    double recipFvf_     { 1.0 }; // 1 / B
-    double recipFvfVisc_ { 1.0 }; // 1 / (B*mu)
+    double fvf_     { 1.0 }; // B
+    double visc_ { 1.0 }; // mu
     double Co_           { 1.0 };
-    double diffCoCv_     { 0.0 }; // Cw - Cv
+    double cv_     { 0.0 }; // Cv
     double rhoS_         { 0.0 };
 
     double recipFvf(const double po) const
     {
         const auto x = this->Co_ * (po - this->po_ref_);
 
-        return this->recipFvf_ * this->exp(x);
+        return this->exp(x) / this->fvf_ ;
     }
 
     double recipFvfVisc(const double po) const
     {
-        const auto y = this->diffCoCv_ * (po - this->po_ref_);
+        const auto y = (this->Co_ - this->cv_) * (po - this->po_ref_);
 
-        return this->recipFvfVisc_ * this->exp(y);
+        return  this->exp(y) / (this->fvf_ * this->visc_);
     }
 
     double exp(const double x) const
@@ -229,14 +249,14 @@ DeadOilConstCompr::DeadOilConstCompr(ElemIt               xBegin,
 {
     // Recall: Table is
     //
-    //    [ Pw, 1/Bw, Cw, 1/(Bw*mu_w), Cw - Cv ]
+    //    [ Po, Bo, Co, mu_o, Cv ]
     //
     // xBegin is Pw, colIt is remaining four columns.
 
-    this->recipFvf_     = convert.column[0](*colIt[0]); // 1/Bw
-    this->Co_           = convert.column[1](*colIt[1]); // Cw
-    this->recipFvfVisc_ = convert.column[2](1.0/(*colIt[2])); // 1/(Bw*mu_w)
-    this->diffCoCv_     = convert.column[3](*colIt[3]); // Cw - Cv
+    this->fvf_     = convert.column[0](*colIt[0]); // Bo
+    this->Co_           = convert.column[1](*colIt[1]); // Co
+    this->visc_ = convert.column[2](*colIt[2]); // mu_o
+    this->cv_     = convert.column[3](*colIt[3]); // Cw - Cv
 
     // Honour requirement that constructor advances column iterators.
     const auto N = std::distance(xBegin, xEnd);
