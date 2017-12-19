@@ -202,6 +202,9 @@ namespace Opm
             // Skip if total rate below threshold (for wells that are
             // shut or stopped for example).
             const double well_reservoir_inflow_rate = -unit::convert::from(xwel[well * ih.nxwel + XWEL_RESV_INDEX], qr_unit);
+
+
+
             if (std::fabs(well_reservoir_inflow_rate) < rate_threshold_) {
                 continue;
             }
@@ -214,6 +217,16 @@ namespace Opm
             }
             // Otherwise: add data for this well.
             WellData wd;
+            // add well rates
+            int xwel_offset = well * ih.nxwel;
+            wd.qOs  = - xwel[ 0 + xwel_offset];
+            wd.qWs  = - xwel[ 1 + xwel_offset];
+            wd.qGs  = - xwel[ 2 + xwel_offset];
+            wd.lrat = - xwel[ 3 + xwel_offset];
+            wd.qr   = - xwel[ 4 + xwel_offset];
+            wd.bhp  =   xwel[ 5 + xwel_offset];
+
+
             wd.name = trimSpacesRight(zwel[well * ih.nzwel]);
             const bool is_producer = (iwel[well * ih.niwel + IWEL_TYPE_INDEX] == IWEL_TYPE_PRODUCER);
             wd.is_injector_well = !is_producer;
