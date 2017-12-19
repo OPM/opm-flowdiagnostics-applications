@@ -58,6 +58,9 @@ namespace Opm
                 std::string gridName;          // empty for main grid, otherwise LGR grid.
                 std::array<int, 3> ijk;        // Cartesian location in grid.
                 double reservoir_inflow_rate;  // Total fluid rate in SI (m^3/s)
+                double qOs;
+                double qWs;
+                double qGs;
 
             };
             std::vector<Completion> completions;
