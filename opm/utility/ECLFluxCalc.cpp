@@ -20,7 +20,7 @@
 #include <opm/utility/ECLFluxCalc.hpp>
 #include <opm/utility/ECLPvtCommon.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
-
+#include <opm/utility/ECLSaturationFunc.hpp>
 #include <opm/parser/eclipse/Units/Units.hpp>
 
 #include <algorithm>
@@ -306,6 +306,16 @@ namespace Opm
         dyn_data.pressure = this->graph_
             .linearisedCellData(rstrt, "PRESSURE",
                                 &ECLUnits::UnitSystem::pressure);
+        /*
+        dyn_data.rs = this->graph_
+            .linearisedCellData(rstrt, "RS",
+                                &ECLUnits::UnitSystem::dissolvedGasOilRat);
+
+        dyn_data.rv = this->graph_
+            .linearisedCellData(rstrt, "RV",
+                                &ECLUnits::UnitSystem::vaporisedOilGasRat);
+
+       */
 
         // Step 1 of Mobility Calculation.
         // Store phase's relative permeability values.
@@ -316,23 +326,64 @@ namespace Opm
         // Allocate space for storing the cell values.
         dyn_data.density.assign(this->graph_.numCells(), 0.0);
 
+
+
         switch (phase) {
         case ECLPhaseIndex::Aqua:
+            dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SWAT");
             return this->watPVT(std::move(dyn_data));
 
         case ECLPhaseIndex::Liquid:
-            return this->oilPVT(rstrt, std::move(dyn_data));
+            dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SOIL");
+            if(dyn_data.saturation.size()>0){
+                return this->oilPVT(rstrt, std::move(dyn_data));
+            }else{
+                // may read two times
+                auto sw =this->graph_.rawLinearisedCellData<double>(rstrt, "SWAT");
+                auto sg =this->graph_.rawLinearisedCellData<double>(rstrt, "SGAS");
+                // SOIL vector not provided.  Compute from SWAT and/or SGAS.
+                std::vector<double>& so = dyn_data.saturation;
+                so.assign(this->graph_.numCells(), 1.0);
+                auto adjust_So_for_other_phase =
+                    [&so](const std::vector<double>& s)
+                {
+                    std::transform(std::begin(so), std::end(so),
+                                   std::begin(s) ,
+                                   std::begin(so), std::minus<double>());
+                };
+                if (sg.size() == this->graph_.numCells()) {
+                    adjust_So_for_other_phase(sg);
+                }
+
+                if (sw.size() == this->graph_.numCells()) {
+                    adjust_So_for_other_phase(sw);
+                }
+                return dyn_data;
+            }
 
         case ECLPhaseIndex::Vapour:
+            dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SGAS");
             return this->gasPVT(rstrt, std::move(dyn_data));
         }
+
 
         throw std::invalid_argument {
             "phaseProperties(): Invalid Phase Identifier"
         };
     }
 
+    double ECLFluxCalc::surfaceDensity(const ECLPhaseIndex   phase) const{
+        switch (phase) {
+        case ECLPhaseIndex::Aqua:
+            return this->pvtWat_->surfaceMassDensity(0);
 
+        case ECLPhaseIndex::Liquid:
+            return this->pvtOil_->surfaceMassDensity(0);
+
+        case ECLPhaseIndex::Vapour:
+            return this->pvtGas_->surfaceMassDensity(0);
+        }
+    }
 
 
 

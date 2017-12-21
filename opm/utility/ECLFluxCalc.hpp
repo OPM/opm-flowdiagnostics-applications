@@ -46,6 +46,9 @@ namespace Opm
             std::vector<double> pressure;
             std::vector<double> mobility;
             std::vector<double> density;
+            std::vector<double> saturation;
+            // std::vector<double> rs;
+            // std::vector<double> rv;
         };
         /// Construct from ECLGraph and Run Initialization Data.
         ///
@@ -87,7 +90,7 @@ namespace Opm
         DynamicData phaseProperties(const ECLRestartData& rstrt,
                                     const ECLPhaseIndex   phase) const;
 
-
+        double surfaceDensity(const ECLPhaseIndex   phase) const;
     private:
 
 
