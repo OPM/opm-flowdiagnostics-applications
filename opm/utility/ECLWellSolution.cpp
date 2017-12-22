@@ -257,8 +257,8 @@ namespace Opm
                                    icon[icon_offset + ICON_K_INDEX] - 1 };
                 // Note: taking the negative input, to get inflow rate.
                 completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
-                completion.qWs  =   -unit::convert::from(xcon[xcon_offset + 0] , qLs_unit);
-                completion.qOs  =   -unit::convert::from(xcon[xcon_offset + 1 ], qLs_unit);
+                completion.qOs  =   -unit::convert::from(xcon[xcon_offset + 0 ], qLs_unit);
+                completion.qWs  =   -unit::convert::from(xcon[xcon_offset + 1] , qLs_unit);
                 completion.qGs  =   -unit::convert::from(xcon[xcon_offset + 2 ], qGs_unit);
                 if (disallow_crossflow_) {
                     // Add completion only if not cross-flowing (injecting producer or producing injector).
