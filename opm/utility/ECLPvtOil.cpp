@@ -777,7 +777,8 @@ fromECLOutput(const ECLInitFileData& init)
     }
 
     const auto& lh = init.keywordData<bool>(LOGIHEAD_KW);
-    const bool is_const_compr = lh[39-1];
+    const int LOGIHEAD_CONST_COMPR_INDEX = 38;
+    const bool is_const_compr = lh[LOGIHEAD_CONST_COMPR_INDEX];
 
     auto raw = ::Opm::ECLPropTableRawData{};
 
