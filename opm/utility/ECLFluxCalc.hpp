@@ -33,6 +33,7 @@
 
 namespace Opm
 {
+
     class ECLRestartData;
     class ECLInitFileData;
 
@@ -40,6 +41,15 @@ namespace Opm
     class ECLFluxCalc
     {
     public:
+        struct DynamicData
+        {
+            std::vector<double> pressure;
+            std::vector<double> mobility;
+            std::vector<double> density;
+            std::vector<double> saturation;
+            // std::vector<double> rs;
+            // std::vector<double> rv;
+        };
         /// Construct from ECLGraph and Run Initialization Data.
         ///
         /// \param[in] graph Connectivity data, as well as providing a means
@@ -73,19 +83,23 @@ namespace Opm
         flux(const ECLRestartData& rstrt,
              const ECLPhaseIndex   phase) const;
 
+        std::vector<double>
+        massflux(const ECLRestartData& rstrt,
+             const ECLPhaseIndex   phase) const;
+
+        DynamicData phaseProperties(const ECLRestartData& rstrt,
+                                    const ECLPhaseIndex   phase) const;
+
+        double surfaceDensity(const ECLPhaseIndex   phase) const;
     private:
-        struct DynamicData
-        {
-            std::vector<double> pressure;
-            std::vector<double> mobility;
-            std::vector<double> density;
-        };
+
 
         double singleFlux(const int connection,
                           const DynamicData& dyn_data) const;
 
-        DynamicData phaseProperties(const ECLRestartData& rstrt,
-                                    const ECLPhaseIndex   phase) const;
+        double singleMassFlux(const int connection,
+                                       const DynamicData& dyn_data) const;
+
 
         DynamicData gasPVT(const ECLRestartData& rstrt,
                            DynamicData&&         dyn_data) const;

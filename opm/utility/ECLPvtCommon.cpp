@@ -140,8 +140,8 @@ recipFvfVisc(const ::Opm::ECLUnits::UnitSystem& usys)
 {
     const auto Bscale     = fvfScale(usys);
     const auto visc_scale = usys.viscosity();
-
     return createConverterToSI(1.0 / (Bscale * visc_scale));
+    //return createConverterToSI(1.0 / (Bscale * visc_scale));
 }
 
 Opm::ECLPVT::ConvertUnits::Converter

@@ -46,6 +46,14 @@ namespace Opm {
     class ECLGraph
     {
     public:
+        /// Raw grid data (geometric grid)
+        struct ECLGeometryGrid {
+            std::array<int, 3> size;
+            std::vector<double> zcorn;
+            std::vector<double> coord;
+            std::vector<int> actnum;
+        };
+
         /// Disabled default constructor.
         ECLGraph() = delete;
 
@@ -118,6 +126,8 @@ namespace Opm {
 
         /// Retrieve number of connections in graph.
         std::size_t numConnections() const;
+
+        std::vector<int> localCellID() const;
 
         /// Retrieve the simulation scenario's active phases.
         ///
@@ -210,6 +220,8 @@ namespace Opm {
         linearisedCellData(const ECLRestartData& rstrt,
                            const std::string&    vector,
                            UnitConvention        unit) const;
+
+        const ECLGeometryGrid& getGeometryGrid() const;
 
     private:
         /// Implementation class.

@@ -112,9 +112,21 @@ namespace Opm
             return ECLUnits::createUnitSystem(unit_code)->reservoirRate();
         }
 
+        double surfaceRateGasUnit(const int unit_code)
+        {
+            return ( ECLUnits::createUnitSystem(unit_code)->surfaceVolumeGas() )/
+                    ( ECLUnits::createUnitSystem(unit_code)->time() );
+        }
 
+        double pressureUnit(const int unit_code){
+             return ECLUnits::createUnitSystem(unit_code)->pressure();
+        }
 
-
+        double surfaceRateLiquidUnit(const int unit_code)
+        {
+            return ( ECLUnits::createUnitSystem(unit_code)->surfaceVolumeLiquid() )/
+                    ( ECLUnits::createUnitSystem(unit_code)->time() );
+        }
         // Return input string with spaces stripped of the right end.
         std::string trimSpacesRight(const std::string& s)
         {
@@ -187,6 +199,9 @@ namespace Opm
             return {};
         }
         const double qr_unit = resRateUnit(ih.unit);
+        const double qGs_unit = surfaceRateGasUnit(ih.unit);
+        const double qLs_unit = surfaceRateLiquidUnit(ih.unit);
+        const double pressure_unit = pressureUnit(ih.unit);
 
         // Load well topology and flow rates.
         auto zwel = restart.keywordData<std::string>(ZWEL_KW, gridName);
@@ -202,6 +217,9 @@ namespace Opm
             // Skip if total rate below threshold (for wells that are
             // shut or stopped for example).
             const double well_reservoir_inflow_rate = -unit::convert::from(xwel[well * ih.nxwel + XWEL_RESV_INDEX], qr_unit);
+
+
+
             if (std::fabs(well_reservoir_inflow_rate) < rate_threshold_) {
                 continue;
             }
@@ -214,6 +232,16 @@ namespace Opm
             }
             // Otherwise: add data for this well.
             WellData wd;
+            // add well rates
+            int xwel_offset = well * ih.nxwel;
+            wd.qOs  = - xwel[ 0 + xwel_offset]*qLs_unit;
+            wd.qWs  = - xwel[ 1 + xwel_offset]*qLs_unit;
+            wd.qGs  = - xwel[ 2 + xwel_offset]*qGs_unit;
+            wd.lrat = - xwel[ 3 + xwel_offset]*qLs_unit;
+            wd.qr   = - xwel[ 4 + xwel_offset]*qr_unit;
+            wd.bhp  =   xwel[ 6 + xwel_offset]*pressure_unit;
+
+
             wd.name = trimSpacesRight(zwel[well * ih.nzwel]);
             const bool is_producer = (iwel[well * ih.niwel + IWEL_TYPE_INDEX] == IWEL_TYPE_PRODUCER);
             wd.is_injector_well = !is_producer;
@@ -229,6 +257,9 @@ namespace Opm
                                    icon[icon_offset + ICON_K_INDEX] - 1 };
                 // Note: taking the negative input, to get inflow rate.
                 completion.reservoir_inflow_rate = -unit::convert::from(xcon[xcon_offset + XCON_QR_INDEX], qr_unit);
+                completion.qOs  =   -unit::convert::from(xcon[xcon_offset + 0 ], qLs_unit);
+                completion.qWs  =   -unit::convert::from(xcon[xcon_offset + 1] , qLs_unit);
+                completion.qGs  =   -unit::convert::from(xcon[xcon_offset + 2 ], qGs_unit);
                 if (disallow_crossflow_) {
                     // Add completion only if not cross-flowing (injecting producer or producing injector).
                     if ((completion.reservoir_inflow_rate < 0.0) == is_producer) {

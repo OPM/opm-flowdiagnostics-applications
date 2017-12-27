@@ -52,6 +52,7 @@ namespace Opm { namespace ECLPVT {
         ///    \endcode.
         Oil(const ECLPropTableRawData& raw,
             const int                  usys,
+            const bool            const_compr,
             std::vector<double>        rhoS);
 
         /// Destructor.
