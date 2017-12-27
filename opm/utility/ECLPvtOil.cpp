@@ -178,7 +178,7 @@ public:
             });
     }
 
-    virtual std::vector<Opm::FlowDiagnostics::Graph>
+    virtual std::vector<Opm::ECLPVT::PVTGraph>
     getPvtCurve(const Opm::ECLPVT::RawCurve /*curve*/) const
     {
         return {};
