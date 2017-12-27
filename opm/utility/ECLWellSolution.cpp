@@ -118,7 +118,8 @@ namespace Opm
                     ( ECLUnits::createUnitSystem(unit_code)->time() );
         }
 
-        double pressureUnit(const int unit_code){
+        double pressureUnit(const int unit_code)
+        {
              return ECLUnits::createUnitSystem(unit_code)->pressure();
         }
 
@@ -217,9 +218,6 @@ namespace Opm
             // Skip if total rate below threshold (for wells that are
             // shut or stopped for example).
             const double well_reservoir_inflow_rate = -unit::convert::from(xwel[well * ih.nxwel + XWEL_RESV_INDEX], qr_unit);
-
-
-
             if (std::fabs(well_reservoir_inflow_rate) < rate_threshold_) {
                 continue;
             }
@@ -234,12 +232,12 @@ namespace Opm
             WellData wd;
             // add well rates
             int xwel_offset = well * ih.nxwel;
-            wd.qOs  = - xwel[ 0 + xwel_offset]*qLs_unit;
-            wd.qWs  = - xwel[ 1 + xwel_offset]*qLs_unit;
-            wd.qGs  = - xwel[ 2 + xwel_offset]*qGs_unit;
-            wd.lrat = - xwel[ 3 + xwel_offset]*qLs_unit;
-            wd.qr   = - xwel[ 4 + xwel_offset]*qr_unit;
-            wd.bhp  =   xwel[ 6 + xwel_offset]*pressure_unit;
+            wd.qOs  = -unit::convert::from(xwel[ 0 + xwel_offset], qLs_unit);
+            wd.qWs  = -unit::convert::from(xwel[ 1 + xwel_offset], qLs_unit);
+            wd.qGs  = -unit::convert::from(xwel[ 2 + xwel_offset], qGs_unit);
+            wd.lrat = -unit::convert::from(xwel[ 3 + xwel_offset], qLs_unit);
+            wd.qr   = -unit::convert::from(xwel[ 4 + xwel_offset], qr_unit);
+            wd.bhp  = unit::convert::from(xwel[ 6 + xwel_offset], pressure_unit);
 
 
             wd.name = trimSpacesRight(zwel[well * ih.nzwel]);
