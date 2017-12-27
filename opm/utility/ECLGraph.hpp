@@ -46,14 +46,6 @@ namespace Opm {
     class ECLGraph
     {
     public:
-        /// Raw grid data (geometric grid)
-        struct ECLGeometryGrid {
-            std::array<int, 3> size;
-            std::vector<double> zcorn;
-            std::vector<double> coord;
-            std::vector<int> actnum;
-        };
-
         /// Disabled default constructor.
         ECLGraph() = delete;
 
@@ -127,6 +119,7 @@ namespace Opm {
         /// Retrieve number of connections in graph.
         std::size_t numConnections() const;
 
+        /// Retrieve active cell indices for all global cells in all grids.
         std::vector<int> localCellID() const;
 
         /// Retrieve the simulation scenario's active phases.
@@ -221,6 +214,16 @@ namespace Opm {
                            const std::string&    vector,
                            UnitConvention        unit) const;
 
+        /// Raw grid data (geometric grid) for corner-point grids.
+        struct ECLGeometryGrid {
+            std::array<int, 3> size;
+            std::vector<double> zcorn;
+            std::vector<double> coord;
+            std::vector<int> actnum;
+        };
+
+        /// Retrieve corner-point grid definition,
+        /// only for main grid in case of local grid refinement (LGR).
         const ECLGeometryGrid& getGeometryGrid() const;
 
     private:
