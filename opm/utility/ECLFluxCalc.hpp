@@ -41,15 +41,6 @@ namespace Opm
     class ECLFluxCalc
     {
     public:
-        struct DynamicData
-        {
-            std::vector<double> pressure;
-            std::vector<double> mobility;
-            std::vector<double> density;
-            std::vector<double> saturation;
-            // std::vector<double> rs;
-            // std::vector<double> rv;
-        };
         /// Construct from ECLGraph and Run Initialization Data.
         ///
         /// \param[in] graph Connectivity data, as well as providing a means
@@ -83,14 +74,53 @@ namespace Opm
         flux(const ECLRestartData& rstrt,
              const ECLPhaseIndex   phase) const;
 
+        /// Retrive phase mass flux on all connections defined by \code
+        /// graph.neighbours() \endcode.
+        ///
+        /// \param[in] rstrt ECL Restart data set from which to extract
+        ///            relevant data per cell.
+        ///
+        /// \param[in] phase Canonical phase for which to retrive flux.
+        ///
+        /// \return Mass flux values corresponding to selected phase.
+        ///         Empty if required data is missing.
+        ///         Numerical values in SI units (kg/s).
         std::vector<double>
         massflux(const ECLRestartData& rstrt,
-             const ECLPhaseIndex   phase) const;
+                 const ECLPhaseIndex   phase) const;
 
+        /// Return type for the phaseProperties() method,
+        /// encapsulates dynamic properties for a single
+        /// phase.
+        struct DynamicData
+        {
+            std::vector<double> pressure;
+            std::vector<double> mobility;
+            std::vector<double> density;
+            std::vector<double> saturation;
+        };
+
+        /// Retrive dynamical properties of a single phase on all cells.
+        ///
+        /// \param[in] rstrt ECL Restart data set from which to extract
+        ///            relevant data per cell.
+        ///
+        /// \param[in] phase Canonical phase for which to retrive properties.
+        ///
+        /// \return DynamicData struct containing cell-values for phase properties.
+        ///         Numerical values in SI units (kg/s).
         DynamicData phaseProperties(const ECLRestartData& rstrt,
                                     const ECLPhaseIndex   phase) const;
 
-        double surfaceDensity(const ECLPhaseIndex   phase) const;
+        /// Retrive the constant surface density of a phase.
+        ///
+        /// \param[in] phase Canonical phase for which to retrive the surface density.
+        ///
+        /// \return Density of given phase at surface conditions.
+        ///         Numerical value in SI units (kg/m^3).
+        double surfaceDensity(const ECLPhaseIndex phase) const;
+
+
     private:
 
 
@@ -98,7 +128,7 @@ namespace Opm
                           const DynamicData& dyn_data) const;
 
         double singleMassFlux(const int connection,
-                                       const DynamicData& dyn_data) const;
+                              const DynamicData& dyn_data) const;
 
 
         DynamicData gasPVT(const ECLRestartData& rstrt,

@@ -223,7 +223,7 @@ namespace Opm
 
     std::vector<double>
     ECLFluxCalc::massflux(const ECLRestartData& rstrt,
-                      const ECLPhaseIndex   phase) const
+                          const ECLPhaseIndex   phase) const
     {
         // Obtain dynamic data.
         const auto dyn_data = this->phaseProperties(rstrt, phase);
@@ -267,7 +267,7 @@ namespace Opm
     }
 
     double ECLFluxCalc::singleMassFlux(const int connection,
-                                   const DynamicData& dyn_data) const
+                                       const DynamicData& dyn_data) const
     {
         const int c1 = neighbours_[2*connection];
         const int c2 = neighbours_[2*connection + 1];
@@ -290,7 +290,10 @@ namespace Opm
         // Background (static) transmissibility.
         const auto T = this->transmissibility_[connection];
 
-        return dyn_data.density[ucell] * mob * T * dh;
+        // Upstream weighted phase density.
+        const auto urho = dyn_data.density[ucell];
+
+        return urho * mob * T * dh;
     }
 
 
@@ -306,16 +309,6 @@ namespace Opm
         dyn_data.pressure = this->graph_
             .linearisedCellData(rstrt, "PRESSURE",
                                 &ECLUnits::UnitSystem::pressure);
-        /*
-        dyn_data.rs = this->graph_
-            .linearisedCellData(rstrt, "RS",
-                                &ECLUnits::UnitSystem::dissolvedGasOilRat);
-
-        dyn_data.rv = this->graph_
-            .linearisedCellData(rstrt, "RV",
-                                &ECLUnits::UnitSystem::vaporisedOilGasRat);
-
-       */
 
         // Step 1 of Mobility Calculation.
         // Store phase's relative permeability values.
@@ -326,8 +319,6 @@ namespace Opm
         // Allocate space for storing the cell values.
         dyn_data.density.assign(this->graph_.numCells(), 0.0);
 
-
-
         switch (phase) {
         case ECLPhaseIndex::Aqua:
             dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SWAT");
@@ -335,13 +326,13 @@ namespace Opm
 
         case ECLPhaseIndex::Liquid:
             dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SOIL");
-            if(dyn_data.saturation.size()>0){
+            if (!dyn_data.saturation.empty()) {
                 return this->oilPVT(rstrt, std::move(dyn_data));
-            }else{
+            } else {
+                // SOIL vector not provided. Compute from SWAT and/or SGAS.
                 // may read two times
-                auto sw =this->graph_.rawLinearisedCellData<double>(rstrt, "SWAT");
-                auto sg =this->graph_.rawLinearisedCellData<double>(rstrt, "SGAS");
-                // SOIL vector not provided.  Compute from SWAT and/or SGAS.
+                auto sw = this->graph_.rawLinearisedCellData<double>(rstrt, "SWAT");
+                auto sg = this->graph_.rawLinearisedCellData<double>(rstrt, "SGAS");
                 std::vector<double>& so = dyn_data.saturation;
                 so.assign(this->graph_.numCells(), 1.0);
                 auto adjust_So_for_other_phase =
@@ -365,7 +356,6 @@ namespace Opm
             dyn_data.saturation = this->graph_.rawLinearisedCellData<double>(rstrt, "SGAS");
             return this->gasPVT(rstrt, std::move(dyn_data));
         }
-
 
         throw std::invalid_argument {
             "phaseProperties(): Invalid Phase Identifier"
