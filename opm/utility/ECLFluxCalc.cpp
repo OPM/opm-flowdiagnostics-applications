@@ -349,7 +349,7 @@ namespace Opm
                 if (sw.size() == this->graph_.numCells()) {
                     adjust_So_for_other_phase(sw);
                 }
-                return dyn_data;
+                return this->oilPVT(rstrt, std::move(dyn_data));
             }
 
         case ECLPhaseIndex::Vapour:
