@@ -2,12 +2,16 @@
 set (opm-flowdiagnostics-applications_CONFIG_VAR
   )
 
-# dependencies
+# Build prerequisites
 set (opm-flowdiagnostics-applications_DEPS
-  # compile with C++0x/11 support if available
+  # This module requires C++11 support, including std::regex
   "CXX11Features REQUIRED"
+  # We need Boost.Filesystem for advanced file handling
+  #   filesystem::path
+  #   filesystem::directory_iterator
+  #   filesystem::last_write_time()
   "Boost 1.44.0
-    COMPONENTS filesystem regex system unit_test_framework REQUIRED"
+    COMPONENTS filesystem system unit_test_framework REQUIRED"
   "ecl REQUIRED"
   # Prerequisite OPM modules
   #   common -> Parameter System
