@@ -12,6 +12,7 @@ set (opm-flowdiagnostics-applications_DEPS
   #   filesystem::last_write_time()
   "Boost 1.44.0
     COMPONENTS filesystem system unit_test_framework REQUIRED"
+  # We need LibECL to handle ECL result sets.
   "ecl REQUIRED"
   # Prerequisite OPM modules
   #   common -> Parameter System
