@@ -9,10 +9,13 @@ set (opm-flowdiagnostics-applications_DEPS
   "Boost 1.44.0
     COMPONENTS filesystem regex system unit_test_framework REQUIRED"
   "ecl REQUIRED"
-  # prerequisite OPM modules
+  # Prerequisite OPM modules
+  #   common -> Parameter System
+  #   fdiag  -> Solver
+  #   parser -> Unit Conversions
   "opm-common REQUIRED"
   "opm-flowdiagnostics REQUIRED"
-  "opm-core REQUIRED"
+  "opm-parser REQUIRED"
   )
 
 find_package_deps(opm-flowdiagnostics-applications)
