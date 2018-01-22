@@ -785,10 +785,30 @@ fromECLOutput(const ECLInitFileData& init)
     const auto& tabdims = init.keywordData<int>("TABDIMS");
     const auto& tab     = init.keywordData<double>("TAB");
 
-    raw.numPrimary = tabdims[ TABDIMS_NRPVTO_ITEM ]; // #Rs nodes/full table
-    raw.numRows    = tabdims[ TABDIMS_NPPVTO_ITEM ]; // #Po nodes/sub-table
-    raw.numCols    = 5; // [ Po, 1/B, 1/(B*mu), d(1/B)/dPo, d(1/(B*mu))/dPo ]
-    raw.numTables  = tabdims[ TABDIMS_NTPVTO_ITEM ]; // # PVTO tables
+    const auto numRs = tabdims[ TABDIMS_NRPVTO_ITEM ]; // #Rs nodes/full table
+
+    // Inner dimension (number of rows per sub-table) is number of pressure
+    // nodes for both live oil and dead oil cases.
+    raw.numRows   = tabdims[ TABDIMS_NPPVTO_ITEM ]; // #Po nodes/sub-table
+    raw.numCols   = 5; // [ Po, 1/B, 1/(B*mu), d(1/B)/dPo, d(1/(B*mu))/dPo ]
+    raw.numTables = tabdims[ TABDIMS_NTPVTO_ITEM ]; // # PVTO tables
+
+    if (lh[ LOGIHEAD_RS_INDEX ]) {
+        // Dissolved gas flag set => Live Oil.
+        //
+        // Number of primary keys (outer dimension, number of sub-tables per
+        // PVTO table) is number of composition nodes.
+
+        raw.numPrimary = numRs;
+    }
+    else {
+        // Dissolved gas flag NOT set => Dead Oil.
+        //
+        // Number of primary keys (outer dimension, number of sub-tables per
+        // PVDO table) is one.
+
+        raw.numPrimary = 1;
+    }
 
     // Extract Primary Key (Rs)
     {
