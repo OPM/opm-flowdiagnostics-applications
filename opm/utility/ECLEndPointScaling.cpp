@@ -733,7 +733,13 @@ Create::TwoPoint::Pc::GO(const ::Opm::ECLGraph&        G,
                          const ::Opm::ECLInitFileData& init,
                          const InvBeh                  handle_invalid)
 {
-    auto sgl = G.rawLinearisedCellData<double>(init, "SGL");
+    // Try dedicated scaled Sg_conn for Pc first
+    auto sgl = G.rawLinearisedCellData<double>(init, "SGLPC");
+    if (sgl.empty()) {
+        // Fall back to general scaled Sw_conn if not available.
+        sgl = G.rawLinearisedCellData<double>(init, "SGL");
+    }
+
     auto sgu = G.rawLinearisedCellData<double>(init, "SGU");
 
     if ((sgl.size() != sgu.size()) ||
@@ -757,7 +763,13 @@ Create::TwoPoint::Pc::OW(const ::Opm::ECLGraph&        G,
                          const ::Opm::ECLInitFileData& init,
                          const InvBeh                  handle_invalid)
 {
-    auto swl = G.rawLinearisedCellData<double>(init, "SWL");
+    // Try dedicated scaled Sw_conn for Pc first
+    auto swl = G.rawLinearisedCellData<double>(init, "SWLPC");
+    if (swl.empty()) {
+        // Fall back to general scaled Sw_conn if not available.
+        swl = G.rawLinearisedCellData<double>(init, "SWL");
+    }
+
     auto swu = G.rawLinearisedCellData<double>(init, "SWU");
 
     if ((swl.size() != swu.size()) ||
