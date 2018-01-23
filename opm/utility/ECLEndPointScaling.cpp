@@ -736,7 +736,7 @@ Create::TwoPoint::Pc::GO(const ::Opm::ECLGraph&        G,
     // Try dedicated scaled Sg_conn for Pc first
     auto sgl = G.rawLinearisedCellData<double>(init, "SGLPC");
     if (sgl.empty()) {
-        // Fall back to general scaled Sw_conn if not available.
+        // Fall back to general scaled Sg_conn if not available.
         sgl = G.rawLinearisedCellData<double>(init, "SGL");
     }
 
