@@ -31,7 +31,7 @@
 #include <opm/utility/ECLResultData.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/utility/imported/Units.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -589,7 +589,7 @@ Gas::Details::unitConverter(const int usys)
     const auto pscale = u->pressure();
 
     auto cvrt_press = [pscale](const double p) {
-        return ::Opm::unit::convert::from(p, pscale);
+        return ::ImportedOpm::unit::convert::from(p, pscale);
     };
 
     return CU {
@@ -680,7 +680,7 @@ Water::Details::unitConverter(const int usys)
     const auto pscale = u->pressure();
 
     auto cvrt_press = [pscale](const double p) {
-        return ::Opm::unit::convert::from(p, pscale);
+        return ::ImportedOpm::unit::convert::from(p, pscale);
     };
 
     return CU {
