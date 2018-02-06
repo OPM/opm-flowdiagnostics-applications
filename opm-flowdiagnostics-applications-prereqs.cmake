@@ -20,7 +20,6 @@ set (opm-flowdiagnostics-applications_DEPS
   #   parser -> Unit Conversions
   "opm-common REQUIRED"
   "opm-flowdiagnostics REQUIRED"
-  "opm-parser REQUIRED"
   )
 
 find_package_deps(opm-flowdiagnostics-applications)

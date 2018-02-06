@@ -21,7 +21,7 @@
 #include <opm/utility/ECLPvtCommon.hpp>
 #include <opm/utility/ECLUnitHandling.hpp>
 #include <opm/utility/ECLSaturationFunc.hpp>
-#include <opm/parser/eclipse/Units/Units.hpp>
+#include <opm/utility/imported/Units.hpp>
 
 #include <algorithm>
 #include <exception>
@@ -90,7 +90,7 @@ namespace {
         const auto depthscale = usys->depth();
 
         for (auto& zi : depth) {
-            zi = ::Opm::unit::convert::from(zi, depthscale);
+            zi = ::ImportedOpm::unit::convert::from(zi, depthscale);
         }
 
         return depth;
