@@ -141,19 +141,8 @@ namespace Opm { namespace SatFunc {
         /// \param[in] smin Left end points for a set of cells.
         ///
         /// \param[in] smax Right end points for a set of cells.
-        ///
-        /// \param[in] handle_invalid How to treat scaling requests with
-        ///    invalid scaled saturations.  This can, for instance, happen
-        ///    if the scaled saturations are present in the result set but
-        ///    some (or all) cells have irreconcilable values (e.g., minimum
-        ///    saturation greater than maximum saturation, smin < -1E+20,
-        ///    smax < -1E+20).
-        ///
-        ///    Default behaviour: Use unscaled saturation if this happens.
-        TwoPointScaling(std::vector<double>            smin,
-                        std::vector<double>            smax,
-                        const InvalidEndpointBehaviour handle_invalid
-                        = InvalidEndpointBehaviour::UseUnscaled);
+        TwoPointScaling(std::vector<double> smin,
+                        std::vector<double> smax);
 
         /// Destructor.
         ~TwoPointScaling();
@@ -261,20 +250,9 @@ namespace Opm { namespace SatFunc {
         ///    for a set of cells.
         ///
         /// \param[in] smax Right end points for a set of cells.
-        ///
-        /// \param[in] handle_invalid How to treat scaling requests with
-        ///    invalid scaled saturations.  This can, for instance, happen
-        ///    if the scaled saturations are present in the result set but
-        ///    some (or all) cells have irreconcilable values (e.g., minimum
-        ///    saturation greater than maximum saturation, smin < -1E+20,
-        ///    smax < -1E+20).
-        ///
-        ///    Default behaviour: Use unscaled saturation if this happens.
-        ThreePointScaling(std::vector<double>            smin,
-                          std::vector<double>            sdisp,
-                          std::vector<double>            smax,
-                          const InvalidEndpointBehaviour handle_invalid
-                          = InvalidEndpointBehaviour::UseUnscaled);
+        ThreePointScaling(std::vector<double> smin,
+                          std::vector<double> sdisp,
+                          std::vector<double> smax);
 
         /// Destructor.
         ~ThreePointScaling();
