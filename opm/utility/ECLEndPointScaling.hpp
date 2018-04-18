@@ -494,46 +494,54 @@ namespace Opm { namespace SatFunc {
             Maximum smax;
         };
 
-        /// Construct an EPS evaluator from a particular ECL result set.
-        ///
-        /// \param[in] G Connected topology of current model's active cells.
-        ///    Needed to linearise table end-points that may be distributed
-        ///    on local grids to all of the model's active cells (\code
-        ///    member function G.rawLinearisedCellData() \endcode).
-        ///
-        /// \param[in] init Container of tabulated saturation functions and
-        ///    saturation table end points for all active cells.
-        ///
-        /// \param[in] opt Options that identify a particular end-point
-        ///    scaling behaviour of a particular saturation function curve.
-        ///
-        /// \return EPS evaluator for the particular curve defined by the
-        ///    input options.
-        static std::unique_ptr<EPSEvalInterface>
-        fromECLOutput(const ECLGraph&        G,
-                      const ECLInitFileData& init,
-                      const EPSOptions&      opt);
+        /// Named constructors for horizontal (saturation) end-point scaling
+        /// of saturation functions.
+        struct Horizontal {
+            /// Construct a horizontal EPS evaluator from a particular ECL
+            /// result set.
+            ///
+            /// \param[in] G Connected topology of current model's active
+            ///    cells.  Needed to linearise table end-points that may be
+            ///    distributed on local grids to all of the model's active
+            ///    cells (\code member function G.rawLinearisedCellData()
+            ///    \endcode).
+            ///
+            /// \param[in] init Container of tabulated saturation functions
+            ///    and saturation table end points for all active cells.
+            ///
+            /// \param[in] opt Options that identify a particular end-point
+            ///    scaling behaviour of a particular saturation function
+            ///    curve.
+            ///
+            /// \return EPS evaluator for the particular curve defined by
+            ///    the input options.
+            static std::unique_ptr<EPSEvalInterface>
+            fromECLOutput(const ECLGraph&        G,
+                          const ECLInitFileData& init,
+                          const EPSOptions&      opt);
 
-        /// Extract table end points relevant to a particular EPS evaluator
-        /// from raw tabulated saturation functions.
-        ///
-        /// \param[in] ep Collection of all raw table saturation end points
-        ///    for all tabulated saturation functions.  Typically computed
-        ///    by direct calls to the \code connateSat() \endcode, \code
-        ///    criticalSat() \endcode, and \code maximumSat() \endcode of
-        ///    the currently active \code Opm::SatFuncInterpolant \code
-        ///    objects.
-        ///
-        /// \param[in] opt Options that identify a particular end-point
-        ///    scaling behaviour of a particular saturation function curve.
-        ///
-        /// \return Subset of the input end points in a format intended for
-        ///    passing as the first argument of member function \code eval()
-        ///    \endcode of the \code EPSEvalInterface \endcode that
-        ///    corresponds to the input options.
-        static std::vector<EPSEvalInterface::TableEndPoints>
-        unscaledEndPoints(const RawTableEndPoints& ep,
-                          const EPSOptions&        opt);
+            /// Extract table end points relevant to a particular horizontal
+            /// EPS evaluator from raw tabulated saturation functions.
+            ///
+            /// \param[in] ep Collection of all raw table saturation end
+            ///    points for all tabulated saturation functions.  Typically
+            ///    computed by direct calls to the \code connateSat()
+            ///    \endcode, \code criticalSat() \endcode, and \code
+            ///    maximumSat() \endcode of the currently active \code
+            ///    Opm::SatFuncInterpolant \code objects.
+            ///
+            /// \param[in] opt Options that identify a particular end-point
+            ///    scaling behaviour of a particular saturation function
+            ///    curve.
+            ///
+            /// \return Subset of the input end points in a format intended
+            ///    for passing as the first argument of member function
+            ///    \code eval() \endcode of the \code EPSEvalInterface
+            ///    \endcode that corresponds to the input options.
+            static std::vector<EPSEvalInterface::TableEndPoints>
+            unscaledEndPoints(const RawTableEndPoints& ep,
+                              const EPSOptions&        opt);
+        };
     };
 }} // namespace Opm::SatFunc
 

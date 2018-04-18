@@ -1459,10 +1459,10 @@ Opm::SatFunc::ThreePointScaling::clone() const
 }
 
 // ---------------------------------------------------------------------
-// Factory function Opm::SatFunc::CreateEPS::fromECLOutput()
+// Factory function Opm::SatFunc::CreateEPS::Horizontal::fromECLOutput()
 
 std::unique_ptr<Opm::SatFunc::EPSEvalInterface>
-Opm::SatFunc::CreateEPS::
+Opm::SatFunc::CreateEPS::Horizontal::
 fromECLOutput(const ECLGraph&        G,
               const ECLInitFileData& init,
               const EPSOptions&      opt)
@@ -1483,10 +1483,10 @@ fromECLOutput(const ECLGraph&        G,
 }
 
 // ---------------------------------------------------------------------
-// Factory function Opm::SatFunc::CreateEPS::unscaledEndPoints()
+// Factory function Opm::SatFunc::CreateEPS::Horizontal::unscaledEndPoints()
 
 std::vector<Opm::SatFunc::EPSEvalInterface::TableEndPoints>
-Opm::SatFunc::CreateEPS::
+Opm::SatFunc::CreateEPS::Horizontal::
 unscaledEndPoints(const RawTableEndPoints& ep,
                   const EPSOptions&        opt)
 {

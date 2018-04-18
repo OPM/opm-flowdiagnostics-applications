@@ -1013,8 +1013,8 @@ private:
             if (active.gas) {
                 opt.subSys = SSys::OilGas;
 
-                this->oil_in_og_.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->oil_in_og_.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->oil_in_og_.tep = this->endPoints(ep, opt);
             }
@@ -1022,8 +1022,8 @@ private:
             if (active.wat) {
                 opt.subSys = SSys::OilWater;
 
-                this->oil_in_ow_.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->oil_in_ow_.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->oil_in_ow_.tep = this->endPoints(ep, opt);
             }
@@ -1041,8 +1041,8 @@ private:
             {
                 opt.curve = FCat::Relperm;
 
-                this->gas_.kr.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->gas_.kr.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->gas_.kr.tep = this->endPoints(ep, opt);
             }
@@ -1056,8 +1056,8 @@ private:
 
                 opt.curve = FCat::CapPress;
 
-                this->gas_.pc.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->gas_.pc.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->gas_.pc.tep = this->endPoints(ep, opt);
 
@@ -1078,8 +1078,8 @@ private:
             {
                 opt.curve = FCat::Relperm;
 
-                this->wat_.kr.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->wat_.kr.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->wat_.kr.tep = this->endPoints(ep, opt);
             }
@@ -1093,8 +1093,8 @@ private:
 
                 opt.curve = FCat::CapPress;
 
-                this->wat_.pc.scaling =
-                    Create::fromECLOutput(G, init, opt);
+                this->wat_.pc.scaling = Create::Horizontal::
+                    fromECLOutput(G, init, opt);
 
                 this->wat_.pc.tep = this->endPoints(ep, opt);
 
@@ -1108,7 +1108,7 @@ private:
         endPoints(const RawTEP& ep, const Create::EPSOptions& opt)
         {
             return EndPtsPtr {
-                new EPSEndPtVec(Create::unscaledEndPoints(ep, opt))
+                new EPSEndPtVec(Create::Horizontal::unscaledEndPoints(ep, opt))
             };
         }
     };
