@@ -17,7 +17,6 @@ set (opm-flowdiagnostics-applications_DEPS
   # Prerequisite OPM modules
   #   common -> Parameter System
   #   fdiag  -> Solver
-  #   parser -> Unit Conversions
   "opm-common REQUIRED"
   "opm-flowdiagnostics REQUIRED"
   )
