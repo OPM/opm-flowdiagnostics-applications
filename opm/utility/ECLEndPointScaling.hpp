@@ -127,6 +127,52 @@ namespace Opm { namespace SatFunc {
         virtual ~EPSEvalInterface();
     };
 
+    /// Protocol for computing vertically scaled relative permeability and
+    /// capillary pressure values.
+    class VerticalScalingInterface
+    {
+    public:
+        struct FunctionValues {
+            struct Point {
+                double sat;
+                double val;
+            };
+
+            Point disp;
+            Point max;
+        };
+
+        /// Associate a saturation value to a specific cell.
+        using SaturationAssoc = EPSEvalInterface::SaturationAssoc;
+
+        /// Convenience type alias.
+        using SaturationPoints = EPSEvalInterface::SaturationPoints;
+
+        /// Compute vertically scaled saturation function values.
+        ///
+        /// \param[in] f Unscaled function values extracted from input's
+        ///    saturation function table.
+        ///
+        /// \param[in] sp Sequence of saturation points.
+        ///
+        /// \param[in] val Sequence of saturation function values.
+        ///
+        /// \return Sequence of vertically scaled saturation function values
+        ///    in order of the input sequence.  In particular the \c i-th
+        ///    element of this result is the scaled version of \code val[i]
+        ///    \endcode.
+        virtual std::vector<double>
+        vertScale(const FunctionValues&      f,
+                  const SaturationPoints&    sp,
+                  const std::vector<double>& val) const = 0;
+
+        /// Virtual copy constructor.
+        virtual std::unique_ptr<VerticalScalingInterface> clone() const = 0;
+
+        /// Destructor.  Must be virtual.
+        virtual ~VerticalScalingInterface();
+    };
+
     /// Implementation of ECLIPSE's standard, two-point, saturation scaling
     /// option.
     class TwoPointScaling : public EPSEvalInterface
@@ -224,6 +270,74 @@ namespace Opm { namespace SatFunc {
 
         /// Virtual copy constructor.
         virtual std::unique_ptr<EPSEvalInterface> clone() const override;
+
+    private:
+        /// Implementation class.
+        class Impl;
+
+        /// Pimpl idiom.
+        std::unique_ptr<Impl> pImpl_;
+    };
+
+    /// Implementation of ECLIPSE's standard, pure vertical saturation
+    /// function scaling option.
+    ///
+    /// Multiplies function values with a location (cell ID) dependent
+    /// factor.  Applies to both relative permeability and capillary
+    /// pressure functions.
+    class PureVerticalScaling : public VerticalScalingInterface
+    {
+    public:
+        /// Constructor.
+        ///
+        /// Typically set up to define vertical scaling of saturation
+        /// function values in all active cells in a model, but could
+        /// alternatively be used as a means to computing the effective
+        /// saturation function value of a single cell.
+        ///
+        /// \param[in] fmax Scaled maximum saturation function (Kr or Pc)
+        ///    value in collection of cells.  Typically an input vector like
+        ///    PCG or KROW from an ECL result set.
+        explicit PureVerticalScaling(std::vector<double> fmax);
+
+        /// Destructor.
+        virtual ~PureVerticalScaling();
+
+        /// Copy constructor.
+        PureVerticalScaling(const PureVerticalScaling& rhs);
+
+        /// Move constructor.
+        PureVerticalScaling(PureVerticalScaling&& rhs);
+
+        /// Assignment operator.
+        PureVerticalScaling& operator=(const PureVerticalScaling& rhs);
+
+        /// Move assignment operator.
+        PureVerticalScaling& operator=(PureVerticalScaling&& rhs);
+
+        /// Compute vertically scaled saturation function values.
+        ///
+        /// \param[in] f Unscaled function values extracted from input's
+        ///    saturation function table.  Method \c PureVerticalScaling
+        ///    uses the maximum value/point only.
+        ///
+        /// \param[in] sp Sequence of saturation points.
+        ///
+        /// \param[in] val Sequence of saturation function values.
+        ///
+        /// \return Sequence of vertically scaled saturation function values
+        ///    in order of the input sequence.  In particular the \c i-th
+        ///    element of this result is the scaled version of \code val[i]
+        ///    \endcode.  Multiplies entries in \p val with an appropriate
+        ///    location dependent factor.
+        virtual std::vector<double>
+        vertScale(const FunctionValues&      f,
+                  const SaturationPoints&    sp,
+                  const std::vector<double>& val) const override;
+
+        /// Virtual copy constructor.
+        virtual std::unique_ptr<VerticalScalingInterface>
+        clone() const override;
 
     private:
         /// Implementation class.
@@ -334,6 +448,67 @@ namespace Opm { namespace SatFunc {
 
         /// Virtual copy constructor.
         virtual std::unique_ptr<EPSEvalInterface> clone() const override;
+
+    private:
+        /// Implementation class.
+        class Impl;
+
+        /// Pimpl idiom.
+        std::unique_ptr<Impl> pImpl_;
+    };
+
+    /// Implementation of ECLIPSE's option for vertical scaling of relative
+    /// permeability functions honouring critical/residual saturation of
+    /// displacing phase.
+    ///
+    /// Multiplies function values with a location (cell ID) and saturation
+    /// dependent factor.  Not intended for capillary pressure functions.
+    class CritSatVerticalScaling : public VerticalScalingInterface
+    {
+    public:
+        /// Constructor.
+        explicit CritSatVerticalScaling(std::vector<double> sdisp,
+                                        std::vector<double> fdisp,
+                                        std::vector<double> fmax);
+
+        /// Destructor.
+        virtual ~CritSatVerticalScaling();
+
+        /// Copy constructor.
+        CritSatVerticalScaling(const CritSatVerticalScaling& rhs);
+
+        /// Move constructor.
+        CritSatVerticalScaling(CritSatVerticalScaling&& rhs);
+
+        /// Assignment operator.
+        CritSatVerticalScaling& operator=(const CritSatVerticalScaling& rhs);
+
+        /// Move assignment operator.
+        CritSatVerticalScaling& operator=(CritSatVerticalScaling&& rhs);
+
+        /// Compute vertically scaled saturation function values.
+        ///
+        /// \param[in] f Unscaled function values extracted from input's
+        ///    saturation function table.  The critical saturation vertical
+        ///    scaling method uses both the displacement and the maximum
+        ///    points.
+        ///
+        /// \param[in] sp Sequence of saturation points.
+        ///
+        /// \param[in] val Sequence of saturation function values.
+        ///
+        /// \return Sequence of vertically scaled saturation function values
+        ///    in order of the input sequence.  In particular the \c i-th
+        ///    element of this result is the scaled version of \code val[i]
+        ///    \endcode.
+        virtual std::vector<double>
+        vertScale(const FunctionValues&      f,
+                  const SaturationPoints&    sp,
+                  const std::vector<double>& val) const override;
+
+        /// Virtual copy constructor.
+        virtual std::unique_ptr<VerticalScalingInterface>
+        clone() const override;
 
     private:
         /// Implementation class.
@@ -519,6 +694,58 @@ namespace Opm { namespace SatFunc {
             static std::vector<EPSEvalInterface::TableEndPoints>
             unscaledEndPoints(const RawTableEndPoints& ep,
                               const EPSOptions&        opt);
+        };
+
+        /// Named constructors for vertical (value) scaling of saturation
+        /// functions.
+        struct Vertical {
+            /// Construct a vertical saturation function value scaling from
+            /// a particular ECL result set.
+            ///
+            /// \param[in] G Connected topology of current model's active
+            ///    cells.  Needed to linearise table end-points that may be
+            ///    distributed on local grids to all of the model's active
+            ///    cells (member functions \code G.rawLinearisedCellData()
+            ///    \endcode and \code G.linearisedCellData() \endcode).
+            ///
+            /// \param[in] init Container of tabulated saturation functions
+            ///    and saturation table end points for all active cells.
+            ///
+            /// \param[in] opt Options that identify a particular end-point
+            ///    scaling behaviour of a particular saturation function
+            ///    curve.
+            ///
+            /// \return Vertical scaling operator for the particular curve
+            ///    defined by the input options.
+            static std::unique_ptr<VerticalScalingInterface>
+            fromECLOutput(const ECLGraph&        G,
+                          const ECLInitFileData& init,
+                          const EPSOptions&      opt);
+
+            using SatFuncEvaluator = std::function<double(int, double)>;
+
+            /// Extract table end points relevant to a particular horizontal
+            /// EPS evaluator from raw tabulated saturation functions.
+            ///
+            /// \param[in] ep Collection of all raw table saturation end
+            ///    points for all tabulated saturation functions.  Typically
+            ///    computed by direct calls to the \code connateSat()
+            ///    \endcode, \code criticalSat() \endcode, and \code
+            ///    maximumSat() \endcode of the currently active \code
+            ///    Opm::SatFuncInterpolant \code objects.
+            ///
+            /// \param[in] opt Options that identify a particular end-point
+            ///    scaling behaviour of a particular saturation function
+            ///    curve.
+            ///
+            /// \return Subset of the input end points in a format intended
+            ///    for passing as the first argument of member function
+            ///    \code eval() \endcode of the \code EPSEvalInterface
+            ///    \endcode that corresponds to the input options.
+            static std::vector<VerticalScalingInterface::FunctionValues>
+            unscaledFunctionValues(const RawTableEndPoints& ep,
+                                   const EPSOptions&        opt,
+                                   const SatFuncEvaluator&  evalSF);
         };
     };
 }} // namespace Opm::SatFunc

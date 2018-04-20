@@ -278,6 +278,122 @@ handleInvalidEndpoint(const SaturationAssoc& sp,
 }
 
 // ---------------------------------------------------------------------
+// Class Opm::SatFunc::PureVerticalScaling::Impl
+// ---------------------------------------------------------------------
+
+class Opm::SatFunc::PureVerticalScaling::Impl
+{
+public:
+    explicit Impl(std::vector<double> fmax)
+        : fmax_(std::move(fmax))
+    {}
+
+    std::vector<double>
+    vertScale(const FunctionValues&   f,
+              const SaturationPoints& sp,
+              std::vector<double>     val) const;
+
+private:
+    std::vector<double> fmax_;
+};
+
+std::vector<double>
+Opm::SatFunc::PureVerticalScaling::Impl::
+vertScale(const FunctionValues&   f,
+          const SaturationPoints& sp,
+          std::vector<double>     val) const
+{
+    assert (sp.size() == val.size() && "Internal Error in Vertical Scaling");
+
+    auto ret = std::move(val);
+
+    const auto maxVal = f.max.val;
+
+    for (auto n = sp.size(), i = 0*n; i < n; ++i) {
+        ret[i] *= this->fmax_[ sp[i].cell ] / maxVal;
+    }
+
+    return ret;
+}
+
+// ---------------------------------------------------------------------
+// Class Opm::SatFunc::CritSatVerticalScaling::Impl
+// ---------------------------------------------------------------------
+
+class Opm::SatFunc::CritSatVerticalScaling::Impl
+{
+public:
+    explicit Impl(std::vector<double> sdisp,
+                  std::vector<double> fdisp,
+                  std::vector<double> fmax)
+        : sdisp_(std::move(sdisp))
+        , fdisp_(std::move(fdisp))
+        , fmax_ (std::move(fmax))
+    {}
+
+    std::vector<double>
+    vertScale(const FunctionValues&   f,
+              const SaturationPoints& sp,
+              std::vector<double>     val) const;
+
+private:
+    std::vector<double> sdisp_;
+    std::vector<double> fdisp_;
+    std::vector<double> fmax_;
+};
+
+std::vector<double>
+Opm::SatFunc::CritSatVerticalScaling::Impl::
+vertScale(const FunctionValues&   f,
+          const SaturationPoints& sp,
+          std::vector<double>     val) const
+{
+    assert ((sp.size() == val.size())  && "Internal Error in Vertical Scaling");
+    assert (! (f.max.val < f.disp.val) && "Internal Error in Table Extraction");
+    assert (! (f.max.sat < f.disp.sat) && "Internal Error in Table Extraction");
+
+    auto ret = std::move(val);
+
+    const auto fdisp = f.disp.val;   const auto sdisp = f.disp.sat;
+    const auto fmax  = f.max .val;   const auto smax  = f.max .sat;
+    const auto sepfv = fmax > fdisp; const auto sep_s = sdisp > smax;
+
+    for (auto n = sp.size(), i = 0*n; i < n; ++i) {
+        auto& y = ret[i];
+
+        const auto c  = sp[i].cell;
+        const auto s  = sp[i].sat;
+        const auto sr = this->sdisp_[c];
+        const auto fr = this->fdisp_[c];
+        const auto fm = this->fmax_ [c];
+
+        if (! (s > sr)) {
+            // s <= sr: Pure vertical scaling in left interval.
+            y *= fr / fdisp;
+        }
+        else if (sepfv) {
+            // Normal case: Kr(Smax) > Kr(Sr)
+            const auto t = (y - fdisp) / (fmax - fdisp);
+
+            y = fr + t*(fm - fr);
+        }
+        else if (sep_s) {
+            // Special case: Kr(Smax) == Kr(Sr).  Use linear function from
+            // saturations.
+            const auto t = (s - sdisp) / (smax - sdisp);
+
+            y = fr + t*(fm - fr);
+        }
+        else {
+            // Smax == Sr; Almost arbitrarily pick fmax_[c].
+            y = fm;
+        }
+    }
+
+    return ret;
+}
+
+// ---------------------------------------------------------------------
 // Class Opm::ThreePointScaling::Impl
 // ---------------------------------------------------------------------
 
@@ -1305,6 +1421,12 @@ Opm::SatFunc::EPSEvalInterface::~EPSEvalInterface()
 
 // ---------------------------------------------------------------------
 
+// Class Opm::SatFunc::VerticalScalingInterface
+Opm::SatFunc::VerticalScalingInterface::~VerticalScalingInterface()
+{}
+
+// ---------------------------------------------------------------------
+
 // Class Opm::SatFunc::TwoPointScaling
 Opm::SatFunc::TwoPointScaling::
 TwoPointScaling(std::vector<double> smin,
@@ -1363,6 +1485,59 @@ Opm::SatFunc::TwoPointScaling::clone() const
 
 // ---------------------------------------------------------------------
 
+// Class Opm::SatFunc::PureVerticalScaling
+
+Opm::SatFunc::PureVerticalScaling::
+PureVerticalScaling(std::vector<double> fmax)
+    : pImpl_(new Impl(std::move(fmax)))
+{}
+
+Opm::SatFunc::PureVerticalScaling::~PureVerticalScaling()
+{}
+
+Opm::SatFunc::PureVerticalScaling::
+PureVerticalScaling(const PureVerticalScaling& rhs)
+    : pImpl_(new Impl(*rhs.pImpl_))
+{}
+
+Opm::SatFunc::PureVerticalScaling::
+PureVerticalScaling(PureVerticalScaling&& rhs)
+    : pImpl_(std::move(rhs.pImpl_))
+{}
+
+Opm::SatFunc::PureVerticalScaling&
+Opm::SatFunc::PureVerticalScaling::operator=(const PureVerticalScaling& rhs)
+{
+    this->pImpl_.reset(new Impl(*rhs.pImpl_));
+
+    return *this;
+}
+
+Opm::SatFunc::PureVerticalScaling&
+Opm::SatFunc::PureVerticalScaling::operator=(PureVerticalScaling&& rhs)
+{
+    this->pImpl_ = std::move(rhs.pImpl_);
+
+    return *this;
+}
+
+std::vector<double>
+Opm::SatFunc::PureVerticalScaling::
+vertScale(const FunctionValues&      f,
+          const SaturationPoints&    sp,
+          const std::vector<double>& val) const
+{
+    return this->pImpl_->vertScale(f, sp, val);
+}
+
+std::unique_ptr<Opm::SatFunc::VerticalScalingInterface>
+Opm::SatFunc::PureVerticalScaling::clone() const
+{
+    return std::unique_ptr<PureVerticalScaling>(new PureVerticalScaling(*this));
+}
+
+// ---------------------------------------------------------------------
+
 // Class Opm::SatFunc::ThreePointScaling
 Opm::SatFunc::ThreePointScaling::
 ThreePointScaling(std::vector<double> smin,
@@ -1417,6 +1592,64 @@ std::unique_ptr<Opm::SatFunc::EPSEvalInterface>
 Opm::SatFunc::ThreePointScaling::clone() const
 {
     return std::unique_ptr<ThreePointScaling>(new ThreePointScaling(*this));
+}
+
+// ---------------------------------------------------------------------
+
+// Class Opm::SatFunc::CritSatVerticalScaling
+Opm::SatFunc::CritSatVerticalScaling::
+CritSatVerticalScaling(std::vector<double> sdisp,
+                       std::vector<double> fdisp,
+                       std::vector<double> fmax)
+    : pImpl_(new Impl(std::move(sdisp), std::move(fdisp), std::move(fmax)))
+{}
+
+Opm::SatFunc::CritSatVerticalScaling::~CritSatVerticalScaling()
+{}
+
+Opm::SatFunc::CritSatVerticalScaling::
+CritSatVerticalScaling(const CritSatVerticalScaling& rhs)
+    : pImpl_(new Impl(*rhs.pImpl_))
+{}
+
+Opm::SatFunc::CritSatVerticalScaling::
+CritSatVerticalScaling(CritSatVerticalScaling&& rhs)
+    : pImpl_(std::move(rhs.pImpl_))
+{}
+
+Opm::SatFunc::CritSatVerticalScaling&
+Opm::SatFunc::CritSatVerticalScaling::
+operator=(const CritSatVerticalScaling& rhs)
+{
+    this->pImpl_.reset(new Impl(*rhs.pImpl_));
+
+    return *this;
+}
+
+Opm::SatFunc::CritSatVerticalScaling&
+Opm::SatFunc::CritSatVerticalScaling::
+operator=(CritSatVerticalScaling&& rhs)
+{
+    this->pImpl_ = std::move(rhs.pImpl_);
+
+    return *this;
+}
+
+std::vector<double>
+Opm::SatFunc::CritSatVerticalScaling::
+vertScale(const FunctionValues&      f,
+          const SaturationPoints&    sp,
+          const std::vector<double>& val) const
+{
+    return this->pImpl_->vertScale(f, sp, val);
+}
+
+std::unique_ptr<Opm::SatFunc::VerticalScalingInterface>
+Opm::SatFunc::CritSatVerticalScaling::clone() const
+{
+    return std::unique_ptr<CritSatVerticalScaling> {
+        new CritSatVerticalScaling(*this)
+    };
 }
 
 // ---------------------------------------------------------------------
