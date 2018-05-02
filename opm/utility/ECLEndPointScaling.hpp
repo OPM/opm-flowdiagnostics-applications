@@ -699,6 +699,10 @@ namespace Opm { namespace SatFunc {
         /// Named constructors for vertical (value) scaling of saturation
         /// functions.
         struct Vertical {
+            using SatFuncEvaluator = std::function<double(int, double)>;
+            using FuncValVector    = std::vector<
+                VerticalScalingInterface::FunctionValues>;
+
             /// Construct a vertical saturation function value scaling from
             /// a particular ECL result set.
             ///
@@ -715,17 +719,25 @@ namespace Opm { namespace SatFunc {
             ///    scaling behaviour of a particular saturation function
             ///    curve.
             ///
+            /// \param[in] tep Table end-points.  Used to define critical
+            ///    saturations of displacing phase for vertical scaling at
+            ///    displacing saturation.  Otherwise unused.
+            ///
+            /// \param[in] fvals Function values at selected saturation
+            ///    points.  Typically constructed by means of function
+            ///    unscaledFunctionValues().
+            ///
             /// \return Vertical scaling operator for the particular curve
             ///    defined by the input options.
             static std::unique_ptr<VerticalScalingInterface>
-            fromECLOutput(const ECLGraph&        G,
-                          const ECLInitFileData& init,
-                          const EPSOptions&      opt);
+            fromECLOutput(const ECLGraph&          G,
+                          const ECLInitFileData&   init,
+                          const EPSOptions&        opt,
+                          const RawTableEndPoints& tep,
+                          const FuncValVector&     fvals);
 
-            using SatFuncEvaluator = std::function<double(int, double)>;
-
-            /// Extract table end points relevant to a particular horizontal
-            /// EPS evaluator from raw tabulated saturation functions.
+            /// Extract table end points relevant to a particular vertical
+            /// scaling evaluator from raw tabulated saturation functions.
             ///
             /// \param[in] ep Collection of all raw table saturation end
             ///    points for all tabulated saturation functions.  Typically
@@ -743,7 +755,9 @@ namespace Opm { namespace SatFunc {
             ///    \code eval() \endcode of the \code EPSEvalInterface
             ///    \endcode that corresponds to the input options.
             static std::vector<VerticalScalingInterface::FunctionValues>
-            unscaledFunctionValues(const RawTableEndPoints& ep,
+            unscaledFunctionValues(const ECLGraph&          G,
+                                   const ECLInitFileData&   init,
+                                   const RawTableEndPoints& ep,
                                    const EPSOptions&        opt,
                                    const SatFuncEvaluator&  evalSF);
         };
