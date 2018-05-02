@@ -13,8 +13,8 @@ Macro (add_acceptance_test casename)
 
   Add_Test (NAME    ToF_accept_${casename}_all_steps
             COMMAND runAcceptanceTest
-            "case=${OPM_TESTS_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
-            "ref-dir=${OPM_TESTS_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
+            "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
+            "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
             "atol=5e-6" "rtol=1e-13")
 
 EndMacro (add_acceptance_test)
@@ -28,8 +28,8 @@ Macro (add_trans_acceptance_test casename)
 
   Add_Test (NAME    Trans_accept_${casename}
             COMMAND runTransTest
-            "case=${OPM_TESTS_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
-            "ref-dir=${OPM_TESTS_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
+            "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
+            "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
             "atol=${abs_tol}" "rtol=${rel_tol}")
 
 EndMacro (add_trans_acceptance_test)
@@ -43,8 +43,8 @@ Macro (add_celldata_acceptance_test casename)
 
   Add_Test (NAME    CellData_accept_${casename}
             COMMAND runLinearisedCellDataTest
-            "case=${OPM_TESTS_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
-            "ref-dir=${OPM_TESTS_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
+            "case=${OPM_DATA_ROOT}/flow_diagnostic_test/eclipse-simulation/${basename}"
+            "ref-dir=${OPM_DATA_ROOT}/flow_diagnostic_test/fd-ref-data/${basename}"
             "quant=${ARGN}" "atol=${abs_tol}" "rtol=${rel_tol}")
 
 EndMacro (add_celldata_acceptance_test)
