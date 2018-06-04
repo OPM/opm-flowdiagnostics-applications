@@ -1974,12 +1974,15 @@ kroCurve(const ECLRegionMapping&    rmap,
     if (enableVerticalSFScaling(scaling) &&
         (this->eps_ != nullptr))
     {
+        auto vkr_eval_sat = abscissas;
+        vkr_eval_sat.resize(so.size(), 1.0);
+
         // Evaluate vertical scaling in input saturations.
         if (subsys == RawCurve::SubSystem::OilGas) {
-            this->eps_->vertScaleKrOG(rmap, so, kr);
+            this->eps_->vertScaleKrOG(rmap, vkr_eval_sat, kr);
         }
         else {
-            this->eps_->vertScaleKrOW(rmap, so, kr);
+            this->eps_->vertScaleKrOW(rmap, vkr_eval_sat, kr);
         }
     }
 
@@ -2070,8 +2073,11 @@ krgCurve(const ECLRegionMapping&    rmap,
     if (enableVerticalSFScaling(scaling) &&
         (this->eps_ != nullptr))
     {
+        auto vkr_eval_sat = abscissas;
+        vkr_eval_sat.resize(sg.size(), 1.0);
+
         // Evaluate vertical scaling in input saturations.
-        this->eps_->vertScaleKrGas(rmap, sg, kr);
+        this->eps_->vertScaleKrGas(rmap, vkr_eval_sat, kr);
     }
 
     // FD::Graph == pair<vector<double>, vector<double>>
@@ -2119,8 +2125,11 @@ pcgoCurve(const ECLRegionMapping&    rmap,
     if (enableVerticalSFScaling(scaling) &&
         (this->eps_ != nullptr))
     {
+        auto pcg_eval_sat = abscissas;
+        pcg_eval_sat.resize(sg.size(), 1.0);
+
         // Evaluate vertical scaling in input saturations.
-        this->eps_->vertScalePcGO(rmap, sg, pc);
+        this->eps_->vertScalePcGO(rmap, pcg_eval_sat, pc);
     }
 
     if (this->usys_output_ != nullptr) {
@@ -2216,8 +2225,11 @@ krwCurve(const ECLRegionMapping&    rmap,
     if (enableVerticalSFScaling(scaling) &&
         (this->eps_ != nullptr))
     {
+        auto vkr_eval_sat = abscissas;
+        vkr_eval_sat.resize(sw.size(), 1.0);
+
         // Evaluate vertical scaling in input saturations.
-        this->eps_->vertScaleKrWat(rmap, sw, kr);
+        this->eps_->vertScaleKrWat(rmap, vkr_eval_sat, kr);
     }
 
     // FD::Graph == pair<vector<double>, vector<double>>
@@ -2265,8 +2277,11 @@ pcowCurve(const ECLRegionMapping&    rmap,
     if (enableVerticalSFScaling(scaling) &&
         (this->eps_ != nullptr))
     {
+        auto pcw_eval_sat = abscissas;
+        pcw_eval_sat.resize(sw.size(), 1.0);
+
         // Evaluate vertical scaling in input saturations.
-        this->eps_->vertScalePcOW(rmap, sw, pc);
+        this->eps_->vertScalePcOW(rmap, pcw_eval_sat, pc);
     }
 
     if (this->usys_output_ != nullptr) {
