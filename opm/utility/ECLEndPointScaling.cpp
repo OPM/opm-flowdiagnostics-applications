@@ -2388,3 +2388,24 @@ unscaledFunctionValues(const ECLGraph&          G,
 
     return ret;
 }
+
+// ---------------------------------------------------------------------
+// Factory functions Opm::SatFunc::scaledConnate*()
+
+std::vector<double>
+Opm::SatFunc::scaledConnateGas(const ECLGraph&                     G,
+                               const ECLInitFileData&              init,
+                               const CreateEPS::RawTableEndPoints& tep)
+{
+    return gridDefaultedVector(G, init, "SGL", tep.conn.gas,
+                               [](const double s) { return s; });
+}
+
+std::vector<double>
+Opm::SatFunc::scaledConnateWater(const ECLGraph&                     G,
+                                 const ECLInitFileData&              init,
+                                 const CreateEPS::RawTableEndPoints& tep)
+{
+    return gridDefaultedVector(G, init, "SWL", tep.conn.water,
+                               [](const double s) { return s; });
+}

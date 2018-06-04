@@ -101,17 +101,17 @@ namespace {
 
     Opm::FlowDiagnostics::Graph
     transformOilCurve(const Opm::FlowDiagnostics::Graph& curve,
-                      const double                       So_offset)
+                      const double                       max2PhaseSatSum)
     {
         auto Sx = std::vector<double>{};  Sx.reserve(curve.first.size());
         {
             const auto& So = curve.first;
 
             std::transform(So.rbegin(), So.rend(), std::back_inserter(Sx),
-                           [So_offset](const double so)
-                           {
-                               return So_offset - so;
-                           });
+                [max2PhaseSatSum](const double so)
+            {
+                return max2PhaseSatSum - so;
+            });
         }
 
         auto y = std::vector<double>{
@@ -721,9 +721,9 @@ public:
     void setOutputUnits(std::unique_ptr<const ECLUnits::UnitSystem> usys);
 
     std::vector<double>
-    relperm(const ECLGraph&             G,
-            const ECLRestartData&       rstrt,
-            const ECLPhaseIndex         p) const;
+    relperm(const ECLGraph&       G,
+            const ECLRestartData& rstrt,
+            const ECLPhaseIndex   p) const;
 
     std::vector<FlowDiagnostics::Graph>
     getSatFuncCurve(const std::vector<RawCurve>& func,
@@ -772,6 +772,22 @@ private:
             if (active.wat) {
                 this->create_wat_eps(host, G, init, ep, opt);
             }
+
+            this->sgl_ = ::Opm::SatFunc::scaledConnateGas  (G, init, ep);
+            this->swl_ = ::Opm::SatFunc::scaledConnateWater(G, init, ep);
+        }
+
+        // ---------------------------------------------
+        // ---------- Scaled connate saturations -------
+
+        double scaledConnateGas(const int cell) const
+        {
+            return this->sgl_[cell];
+        }
+
+        double scaledConnateWater(const int cell) const
+        {
+            return this->swl_[cell];
         }
 
         // ---------------------------------------------
@@ -880,7 +896,7 @@ private:
                             const std::vector<double>& sw,
                             std::vector<double>&       kr) const
         {
-            this->vertScale(this->wat_.kr, rmap, sw,kr);
+            this->vertScale(this->wat_.kr, rmap, sw, kr);
         }
 
         void vertScalePcGO(const ECLRegionMapping&    rmap,
@@ -998,6 +1014,9 @@ private:
         EPS     oil_in_ow_;
         FullEPS gas_;
         FullEPS wat_;
+
+        std::vector<double> sgl_;
+        std::vector<double> swl_;
 
         // ----------------------------------------------
         // ------- End-point scaling (engine) -----------
@@ -1509,6 +1528,11 @@ private:
             regOp(regID, rmap);
         }
     }
+
+    double max2PSatSum(const RawCurve&       fi,
+                       const std::size_t     regID,
+                       const int             cell,
+                       const SatFuncScaling& scaling) const;
 };
 
 Opm::ECLSaturationFunc::Impl::Impl(const ECLGraph&        G,
@@ -1788,11 +1812,13 @@ getSatFuncCurve(const std::vector<RawCurve>& func,
                 this->kroCurve(*oil_assoc.second, regID,
                                fi.subsys, oil_assoc.first, scaling);
 
-            const auto So_off = (fi.subsys == RawCurve::SubSystem::OilGas)
-                ? oil_assoc.first.back() // Sg = Max{So} - So in G/O system
-                : 1.0;                   // Sw = 1.0 - So     in O/W system
+            // Maximum attainable value of "So + S{g,w}" in pertinent
+            // two-phase system in this cell.  Expected to be 1-SWL for G/O
+            // systems and 1-SGL (almost always == 1) for O/W systems.
+            const auto max2PhaseSatSum =
+                this->max2PSatSum(fi, regID, activeCell, scaling);
 
-            graph.push_back(transformOilCurve(kro, So_off));
+            graph.push_back(transformOilCurve(kro, max2PhaseSatSum));
         }
         break;
 
@@ -2376,6 +2402,53 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const
     }
 
     return ep;
+}
+
+double
+Opm::ECLSaturationFunc::Impl::
+max2PSatSum(const RawCurve&       fi,
+            const std::size_t     regID,
+            const int             cell,
+            const SatFuncScaling& scaling) const
+{
+    auto smin = 0.0;
+
+    if (fi.subsys == RawCurve::SubSystem::OilGas) {
+        // Max 2p Saturation sum = 1 - SWL
+        if (enableHorizontalEPS(scaling)) {
+            if (this->eps_ != nullptr) {
+                smin = this->eps_->scaledConnateWater(cell);
+            }
+            else {
+                throw std::logic_error {
+                    "Cannot Activate EPS without Backing Object"
+                };
+            }
+        }
+        else {
+            const auto swco = this->wat_->swco();
+            smin = swco[regID - 1];
+        }
+    }
+    else {
+        // Max 2p Saturation sum = 1 - SGL (almost always = 1)
+        if (enableHorizontalEPS(scaling)) {
+            if (this->eps_ != nullptr) {
+                smin = this->eps_->scaledConnateGas(cell);
+            }
+            else {
+                throw std::logic_error {
+                    "Cannot Activate EPS without Backing Object"
+                };
+            }
+        }
+        else {
+            const auto sgco = this->gas_->sgco();
+            smin = sgco[regID - 1];
+        }
+    }
+
+    return 1.0 - smin;
 }
 
 // =====================================================================

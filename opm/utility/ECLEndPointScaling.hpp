@@ -762,6 +762,16 @@ namespace Opm { namespace SatFunc {
                                    const SatFuncEvaluator&  evalSF);
         };
     };
+
+    std::vector<double>
+    scaledConnateGas(const ECLGraph&                     G,
+                     const ECLInitFileData&              init,
+                     const CreateEPS::RawTableEndPoints& tep);
+
+    std::vector<double>
+    scaledConnateWater(const ECLGraph&                     G,
+                       const ECLInitFileData&              init,
+                       const CreateEPS::RawTableEndPoints& tep);
 }} // namespace Opm::SatFunc
 
 #endif // OPM_ECLENDPOINTSCALING_HEADER_INCLUDED
