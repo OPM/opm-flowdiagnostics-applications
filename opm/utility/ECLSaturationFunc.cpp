@@ -2393,6 +2393,12 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const
         ep.crit.oil_in_water = this->oil_->sowcr();
         ep.smax.oil          = this->oil_->somax();
     }
+    else {
+        ep.conn.oil          = zero;
+        ep.crit.oil_in_gas   = zero;
+        ep.crit.oil_in_water = zero;
+        ep.smax.oil          = zero;
+    }
 
     if (active.gas) {
         ep.conn.gas = this->gas_->sgco();
@@ -2411,9 +2417,20 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active) const
         ep.smax.water = this->wat_->swmax();
     }
     else {
-        ep.conn.water = zero;
-        ep.crit.water = zero;
-        ep.smax.water = zero;
+        auto swco = std::vector<double>(zero.size());
+
+        std::transform(std::begin(ep.smax.oil), std::end(ep.smax.oil),
+                       std::begin(ep.conn.gas),
+                       std::begin(swco),
+            [](const double somax, const double sgco)
+        {
+            // Typically 1 - somax.
+            return 1.0 - (somax + sgco);
+        });
+
+        ep.conn.water = swco;
+        ep.crit.water = swco;
+        ep.smax.water = std::move(swco);
     }
 
     return ep;
