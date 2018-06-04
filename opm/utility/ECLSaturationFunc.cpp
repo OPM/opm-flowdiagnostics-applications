@@ -1190,9 +1190,9 @@ private:
                 auto& eps = this->oil_in_og_;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1215,9 +1215,9 @@ private:
                 auto& eps = this->oil_in_ow_;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1253,9 +1253,9 @@ private:
                 auto& eps = this->gas_.kr;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1281,9 +1281,9 @@ private:
                 auto& eps = this->gas_.pc;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1319,9 +1319,9 @@ private:
                 auto& eps = this->wat_.kr;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1347,9 +1347,9 @@ private:
                 auto& eps = this->wat_.pc;
 
                 eps.scaling = Create::Horizontal::
-                    fromECLOutput(G, init, opt);
+                    fromECLOutput(G, init, opt, ep);
 
-                eps.tep = this->endPoints(ep, opt);
+                eps.tep = this->endPoints(opt, ep);
 
                 eps.vertfuncval = this->
                     vertFuncVal(G, init, ep, opt, [&host]
@@ -1368,10 +1368,11 @@ private:
         }
 
         EndPtsPtr
-        endPoints(const RawTEP& ep, const Create::EPSOptions& opt)
+        endPoints(const Create::EPSOptions& opt,
+                  const RawTEP&             ep)
         {
             return EndPtsPtr {
-                new EPSEndPtVec(Create::Horizontal::unscaledEndPoints(ep, opt))
+                new EPSEndPtVec(Create::Horizontal::unscaledEndPoints(opt, ep))
             };
         }
 
