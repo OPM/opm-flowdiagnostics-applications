@@ -1415,6 +1415,10 @@ lookup(const std::string& vector, const std::string& gridName) const
         }
     }
 
+    // Status of 'vector' unknown for 'gridName'.  Actually look for the
+    // vector in gridName's sections (main grid if gridName.empty(),
+    // otherwise named local grid).
+
     if (gridName.empty()) {
         return this->lookupMainGrid(key);
     }
