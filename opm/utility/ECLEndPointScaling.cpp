@@ -1,4 +1,5 @@
 /*
+  Copyright 2018 Equinor ASA.
   Copyright 2017 Statoil ASA.
 
   This file is part of the Open Porous Media Project (OPM).
@@ -36,6 +37,7 @@
 #include <exception>
 #include <initializer_list>
 #include <iterator>
+#include <limits>
 #include <numeric>
 #include <stdexcept>
 #include <utility>
@@ -433,6 +435,9 @@ class Opm::SatFunc::PureVerticalScaling::Impl
 public:
     explicit Impl(std::vector<double> fmax)
         : fmax_(std::move(fmax))
+        , inf_ (std::numeric_limits<double>::has_infinity
+                ? std::numeric_limits<double>::infinity()
+                : std::numeric_limits<double>::max())
     {}
 
     std::vector<double>
@@ -442,6 +447,16 @@ public:
 
 private:
     std::vector<double> fmax_;
+
+    double inf_;
+
+    std::vector<double>
+    zeroMaxVal(const SaturationPoints& sp) const;
+
+    std::vector<double>
+    nonZeroMaxVal(const SaturationPoints& sp,
+                  const double            maxVal,
+                  std::vector<double>     val) const;
 };
 
 std::vector<double>
@@ -452,9 +467,39 @@ vertScale(const FunctionValues&   f,
 {
     assert (sp.size() == val.size() && "Internal Error in Vertical Scaling");
 
-    auto ret = std::move(val);
-
     const auto maxVal = f.max.val;
+
+    if (! (std::abs(maxVal) > 0.0)) {
+        return this->zeroMaxVal(sp);
+    }
+
+    return this->nonZeroMaxVal(sp, maxVal, std::move(val));
+}
+
+std::vector<double>
+Opm::SatFunc::PureVerticalScaling::Impl::
+zeroMaxVal(const SaturationPoints& sp) const
+{
+    auto ret = std::vector<double>(sp.size(), 0.0);
+
+    for (auto n = sp.size(), i = 0*n; i < n; ++i) {
+        const auto fmax = this->fmax_[ sp[i].cell ];
+
+        ret[i] = (std::abs(fmax) > 0.0)
+            ? (std::signbit(fmax) ? -this->inf_ : this->inf_)
+            : 0.0;
+    }
+
+    return ret;
+}
+
+std::vector<double>
+Opm::SatFunc::PureVerticalScaling::Impl::
+nonZeroMaxVal(const SaturationPoints& sp,
+              const double            maxVal,
+              std::vector<double>     val) const
+{
+    auto ret = std::move(val);
 
     for (auto n = sp.size(), i = 0*n; i < n; ++i) {
         ret[i] *= this->fmax_[ sp[i].cell ] / maxVal;
