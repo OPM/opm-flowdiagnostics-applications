@@ -667,11 +667,6 @@ Impl::reverse(const TableEndPoints&   tep,
             // Map to Minimum Input Saturation in cell (sLO).
             s_unsc = sLO;
         }
-        else if (! (eval_pt.sat < tep.high)) {
-            // s >= maximum tabulated saturation.
-            // Map to Maximum Input Saturation in cell (sHI).
-            s_unsc = sHI;
-        }
         else if (eval_pt.sat < tep.disp) {
             // s in tabulated interval (tep.low, tep.disp)
             // Map to Input Saturation in (sLO, sR)
@@ -681,14 +676,19 @@ Impl::reverse(const TableEndPoints&   tep,
 
             s_unsc = sLO + t*(sR - sLO);
         }
-        else {
-            // s in tabulated interval (tep.disp, tep.high)
-            // Map to Input Saturation in (sR, sHI)
+        else if (eval_pt.sat < tep.high) {
+            // s in tabulated interval [tep.disp, tep.high)
+            // Map to Input Saturation in [sR, sHI)
+            assert (tep.high > tep.disp);
+
             const auto t =
                 (eval_pt.sat - tep.disp)
                 / (tep.high  - tep.disp);
 
             s_unsc = sR + t*(sHI - sR);
+        }
+        else {
+            s_unsc = sHI;
         }
     }
 
