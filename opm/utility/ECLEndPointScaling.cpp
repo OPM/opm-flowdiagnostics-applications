@@ -688,7 +688,7 @@ Impl::reverse(const TableEndPoints&   tep,
             s_unsc = std::min(sR + t*std::max(sHI - sR, 0.0), sHI);
         }
         else {
-            s_unsc = sHI;
+            s_unsc = (tep.high > tep.disp) ? sHI : sR;
         }
     }
 
