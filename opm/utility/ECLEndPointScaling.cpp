@@ -513,14 +513,23 @@ vertScale(const FunctionValues&   f,
             y *= fr / fdisp;
         }
         else if (sepfv) {
-            // s > sr; normal case: Kr(Smax) > Kr(Sr)
+            // s \in [sr, sm), sm > sr; normal case: Kr(Smax) > Kr(Sr).
+            //
+            // Linear function between (sr,fr) and (sm,fm) in terms of
+            // function value 'y'.  This usually alters the shape of the
+            // relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
             const auto t = (y - fdisp) / (fmax - fdisp);
 
             y = fr + t*(fm - fr);
         }
         else if (s < sm) {
-            // s > sr; special case: Kr(Smax) == Kr(Sr) in table.  Use
-            // linear function between (sr,fr) and (sm,fm).
+            // s \in [sr, sm), sm > sr; special case: Kr(Smax) == Kr(Sr).
+            //
+            // Use linear function between (sr,fr) and (sm,fm) in terms of
+            // saturation value 's'.  This usually alters the shape of the
+            // relative permeability function in this interval (e.g.,
+            // roughly quadratic to linear).
             const auto t = (s - sr) / (sm - sr);
 
             y = fr + t*(fm - fr);
@@ -668,7 +677,7 @@ Impl::reverse(const TableEndPoints&   tep,
             s_unsc = sLO;
         }
         else if (eval_pt.sat < tep.disp) {
-            // s in tabulated interval (tep.low, tep.disp)
+            // s in tabulated interval [tep.low, tep.disp)
             // Map to Input Saturation in (sLO, sR)
             const auto t =
                 (eval_pt.sat - tep.low)
@@ -688,6 +697,17 @@ Impl::reverse(const TableEndPoints&   tep,
             s_unsc = std::min(sR + t*std::max(sHI - sR, 0.0), sHI);
         }
         else {
+            // s >= maximum tabulated saturation.
+            //
+            // Map to Maximum Input Saturation in cell (sHI) if maximum
+            // tabulated saturation is strictly greater than critical
+            // displacing saturation--otherwise map to critical displacing
+            // saturation.
+            //
+            // Needed to handle cases in which \code tep.disp==tep.high
+            // \endcode but scaled versions of these might differ, i.e. when
+            // sR < sHI, but the corresponding saturation points in the
+            // underlying input table coincide.
             s_unsc = (tep.high > tep.disp) ? sHI : sR;
         }
     }
