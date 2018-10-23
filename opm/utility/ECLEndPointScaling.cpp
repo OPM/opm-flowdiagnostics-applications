@@ -503,13 +503,13 @@ vertScale(const FunctionValues&   f,
 
         const auto c  = sp[i].cell;
         const auto s  = sp[i].sat;
-        const auto sr = this->sdisp_[c];
+        const auto sr = std::min(this->sdisp_[c], this->smax_[c]);
         const auto fr = this->fdisp_[c];
         const auto sm = this->smax_ [c];
         const auto fm = this->fmax_ [c];
 
-        if (! (s > sr)) {
-            // s <= sr: Pure vertical scaling in left interval.
+        if (s < sr) {
+            // s < sr: Pure vertical scaling in left interval.
             y *= fr / fdisp;
         }
         else if (sepfv) {
