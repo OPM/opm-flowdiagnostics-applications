@@ -35,7 +35,6 @@
 #include <cassert>
 #include <cmath>
 #include <exception>
-#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <numeric>
@@ -219,21 +218,6 @@ namespace {
         return (std::abs(s) < 1.0e+20) ? s : dflt;
     }
 
-    bool validSaturation(const double s)
-    {
-        return (! (s < 0.0)) && (! (s > 1.0));
-    }
-
-    bool validSaturations(std::initializer_list<double> sats)
-    {
-        return std::accumulate(std::begin(sats),
-                               std::end  (sats), true,
-            [](const bool result, const double s) -> bool
-        {
-            return result && validSaturation(s);
-        });
-    }
-
     bool
     haveScaledRelPermAtCritSat(const ::Opm::ECLGraph&                       G,
                                const ::Opm::ECLInitFileData&                init,
@@ -291,9 +275,6 @@ private:
 
     InvalidEndpointBehaviour handle_invalid_;
 
-    void handleInvalidEndpoint(const SaturationAssoc& sp,
-                               std::vector<double>&   effsat) const;
-
     double sMin(const std::vector<int>::size_type cell,
                 const TableEndPoints&             tep) const
     {
@@ -328,12 +309,6 @@ Impl::eval(const TableEndPoints&   tep,
 
         const auto sLO = this->sMin(cell, tep);
         const auto sHI = this->sMax(cell, tep);
-
-        if (! validSaturations({ sLO, sHI })) {
-            this->handleInvalidEndpoint(eval_pt, effsat);
-
-            continue;
-        }
 
         effsat.push_back(0.0);
         auto& s_eff = effsat.back();
@@ -374,12 +349,6 @@ Impl::reverse(const TableEndPoints&   tep,
         const auto sLO = this->sMin(cell, tep);
         const auto sHI = this->sMax(cell, tep);
 
-        if (! validSaturations({ sLO, sHI })) {
-            this->handleInvalidEndpoint(eval_pt, unscaledsat);
-
-            continue;
-        }
-
         unscaledsat.push_back(0.0);
         auto& s_unsc = unscaledsat.back();
 
@@ -404,26 +373,6 @@ Impl::reverse(const TableEndPoints&   tep,
     }
 
     return unscaledsat;
-}
-
-void
-Opm::SatFunc::TwoPointScaling::Impl::
-handleInvalidEndpoint(const SaturationAssoc& sp,
-                      std::vector<double>&   effsat) const
-{
-    if (this->handle_invalid_ == InvalidEndpointBehaviour::UseUnscaled) {
-        // User requests that invalid scaling be treated as unscaled
-        // saturations.  Pick that.
-        effsat.push_back(sp.sat);
-        return;
-    }
-
-    if (this->handle_invalid_ == InvalidEndpointBehaviour::IgnorePoint) {
-        // User requests that invalid scaling be ignored.  Signal invalid
-        // scaled saturation to caller as NaN.
-        effsat.push_back(std::nan(""));
-        return;
-    }
 }
 
 // ---------------------------------------------------------------------
@@ -629,9 +578,6 @@ private:
 
     InvalidEndpointBehaviour handle_invalid_;
 
-    void handleInvalidEndpoint(const SaturationAssoc& sp,
-                               std::vector<double>&   effsat) const;
-
     double sMin(const std::vector<int>::size_type cell,
                 const TableEndPoints&             tep) const
     {
@@ -674,12 +620,6 @@ Impl::eval(const TableEndPoints&   tep,
         const auto sLO = this->sMin (cell, tep);
         const auto sR  = this->sDisp(cell, tep);
         const auto sHI = this->sMax (cell, tep);
-
-        if (! validSaturations({ sLO, sR, sHI })) {
-            this->handleInvalidEndpoint(eval_pt, effsat);
-
-            continue;
-        }
 
         effsat.push_back(0.0);
         auto& s_eff = effsat.back();
@@ -724,12 +664,6 @@ Impl::reverse(const TableEndPoints&   tep,
         const auto sR  = this->sDisp(cell, tep);
         const auto sHI = this->sMax (cell, tep);
 
-        if (! validSaturations({ sLO, sR, sHI })) {
-            this->handleInvalidEndpoint(eval_pt, unscaledsat);
-
-            continue;
-        }
-
         unscaledsat.push_back(0.0);
         auto& s_unsc = unscaledsat.back();
 
@@ -764,26 +698,6 @@ Impl::reverse(const TableEndPoints&   tep,
     }
 
     return unscaledsat;
-}
-
-void
-Opm::SatFunc::ThreePointScaling::Impl::
-handleInvalidEndpoint(const SaturationAssoc& sp,
-                      std::vector<double>&   effsat) const
-{
-    if (this->handle_invalid_ == InvalidEndpointBehaviour::UseUnscaled) {
-        // User requests that invalid scaling be treated as unscaled
-        // saturations.  Pick that.
-        effsat.push_back(sp.sat);
-        return;
-    }
-
-    if (this->handle_invalid_ == InvalidEndpointBehaviour::IgnorePoint) {
-        // User requests that invalid scaling be ignored.  Signal invalid
-        // scaled saturation to caller as NaN.
-        effsat.push_back(std::nan(""));
-        return;
-    }
 }
 
 // ---------------------------------------------------------------------
