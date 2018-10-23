@@ -619,21 +619,25 @@ Impl::eval(const TableEndPoints&   tep,
             // s <= sLO
             s_eff = tep.low;
         }
-        else if (! (eval_pt.sat < sHI)) {
-            // s >= sHI
-            s_eff = tep.high;
-        }
-        else if (eval_pt.sat < sR) {
-            // s \in (sLO, sR)
+        else if (eval_pt.sat < std::min(sR, sHI)) {
+            // s in scaled interval [sLO, sR)
+            // Map to tabulated saturation in [tep.low, tep.disp)
             const auto t = (eval_pt.sat - sLO) / (sR - sLO);
 
             s_eff = tep.low + t*(tep.disp - tep.low);
         }
-        else {
-            // s \in (sR, sHI)
+        else if (eval_pt.sat < sHI) {
+            // s in scaled interval [sR, sHI)
+            // Map to tabulated saturation in [tep.disp, tep.high)
+            assert (sHI > sR);
+
             const auto t = (eval_pt.sat - sR) / (sHI - sR);
 
             s_eff = tep.disp + t*(tep.high - tep.disp);
+        }
+        else {
+            // s >= sHI
+            s_eff = tep.high;
         }
     }
 
