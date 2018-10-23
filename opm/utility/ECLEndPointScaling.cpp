@@ -674,7 +674,7 @@ Impl::reverse(const TableEndPoints&   tep,
                 (eval_pt.sat - tep.low)
                 / (tep.disp  - tep.low);
 
-            s_unsc = sLO + t*(sR - sLO);
+            s_unsc = std::min(sLO + t*(sR - sLO), sHI);
         }
         else if (eval_pt.sat < tep.high) {
             // s in tabulated interval [tep.disp, tep.high)
@@ -685,7 +685,7 @@ Impl::reverse(const TableEndPoints&   tep,
                 (eval_pt.sat - tep.disp)
                 / (tep.high  - tep.disp);
 
-            s_unsc = sR + t*(sHI - sR);
+            s_unsc = std::min(sR + t*std::max(sHI - sR, 0.0), sHI);
         }
         else {
             s_unsc = sHI;
