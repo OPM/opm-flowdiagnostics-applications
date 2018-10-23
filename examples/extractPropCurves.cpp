@@ -340,37 +340,6 @@ namespace {
         return Opm::ECLUnits::serialisedUnitConventions(init);
     }
 
-    Opm::SatFunc::EPSEvalInterface::InvalidEndpointBehaviour
-    handleInvalid(const std::string& behaviour)
-    {
-        using IEB = Opm::SatFunc::
-            EPSEvalInterface::InvalidEndpointBehaviour;
-
-        if ((behaviour == "ignore") ||
-            (behaviour == "ignore-point") ||
-            (behaviour == "ignore_point") ||
-            (behaviour == "ignorepoint"))
-        {
-            return IEB::IgnorePoint;
-        }
-
-        return IEB::UseUnscaled;
-    }
-
-    auto handleInvalid(const Opm::ParameterGroup& prm)
-        -> decltype(handleInvalid("ignore"))
-    {
-        for (const auto* param : { "handle_invalid" ,
-                                   "hInv", "handleInv" })
-        {
-            if (prm.has(param)) {
-                return handleInvalid(prm.get<std::string>(param));
-            }
-        }
-
-        return handleInvalid("ignore");
-    }
-
     int getActiveCell(const Opm::ECLGraph&       G,
                       const Opm::ParameterGroup& prm)
     {
@@ -424,8 +393,7 @@ namespace {
             prm.getDefault("useEPS", std::string{"off"});
 
         auto scaling = Opm::ECLSaturationFunc::SatFuncScaling{};
-        scaling.enable  = static_cast<unsigned char>(0);
-        scaling.invalid = handleInvalid(prm);
+        scaling.enable = static_cast<unsigned char>(0);
 
         if (std::regex_search(useEPS, horiz)) {
             scaling.enable |= T::Horizontal;

@@ -249,9 +249,7 @@ class Opm::SatFunc::TwoPointScaling::Impl
 public:
     Impl(std::vector<double> smin,
          std::vector<double> smax)
-        : smin_          (std::move(smin))
-        , smax_          (std::move(smax))
-        , handle_invalid_(InvalidEndpointBehaviour::UseUnscaled)
+        : smin_(std::move(smin)), smax_(std::move(smax))
     {
         if (this->smin_.size() != this->smax_.size()) {
             throw std::invalid_argument {
@@ -272,8 +270,6 @@ public:
 private:
     std::vector<double> smin_;
     std::vector<double> smax_;
-
-    InvalidEndpointBehaviour handle_invalid_;
 
     double sMin(const std::vector<int>::size_type cell,
                 const TableEndPoints&             tep) const
@@ -548,10 +544,7 @@ public:
     Impl(std::vector<double> smin ,
          std::vector<double> sdisp,
          std::vector<double> smax )
-        : smin_          (std::move(smin ))
-        , sdisp_         (std::move(sdisp))
-        , smax_          (std::move(smax ))
-        , handle_invalid_(InvalidEndpointBehaviour::UseUnscaled)
+        : smin_(std::move(smin)), sdisp_(std::move(sdisp)), smax_(std::move(smax))
     {
         if ((this->sdisp_.size() != this->smin_.size()) ||
             (this->sdisp_.size() != this->smax_.size()))
@@ -575,8 +568,6 @@ private:
     std::vector<double> smin_;
     std::vector<double> sdisp_;
     std::vector<double> smax_;
-
-    InvalidEndpointBehaviour handle_invalid_;
 
     double sMin(const std::vector<int>::size_type cell,
                 const TableEndPoints&             tep) const
@@ -708,7 +699,6 @@ namespace Create {
     using EPSOpt = ::Opm::SatFunc::CreateEPS::EPSOptions;
     using RTEP   = ::Opm::SatFunc::CreateEPS::RawTableEndPoints;
     using TEP    = ::Opm::SatFunc::EPSEvalInterface::TableEndPoints;
-    using InvBeh = ::Opm::SatFunc::EPSEvalInterface::InvalidEndpointBehaviour;
 
     namespace TwoPoint {
         using EPS    = ::Opm::SatFunc::TwoPointScaling;
