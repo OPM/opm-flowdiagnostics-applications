@@ -1787,7 +1787,7 @@ KrGO::twoPointMethod(const ::Opm::ECLGraph&        G,
     auto t = std::vector<double>(sogcr.size(), 0.0);
     {
         const auto& sgco = tep.conn.gas;
-        const auto& swco = tep.conn.gas;
+        const auto& swco = tep.conn.water;
         const auto& sgcr = tep.crit.gas;
 
         for (auto n = sgcr.size(), i = 0*n; i < n; ++i) {
@@ -1835,7 +1835,7 @@ KrOW::twoPointMethod(const ::Opm::ECLGraph&        G,
     auto t = std::vector<double>(sowcr.size(), 0.0);
     {
         const auto& sgco = tep.conn.gas;
-        const auto& swco = tep.conn.gas;
+        const auto& swco = tep.conn.water;
         const auto& swcr = tep.crit.water;
 
         for (auto n = swcr.size(), i = 0*n; i < n; ++i) {
