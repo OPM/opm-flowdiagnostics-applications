@@ -14,7 +14,7 @@
 #                                                                         #
 ###########################################################################
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 3.10)
 
 # additional search modules
 option(SIBLING_SEARCH "Search for other modules in sibling directories?" ON)
@@ -51,6 +51,7 @@ endif()
 find_package(opm-common REQUIRED)
 
 include(OpmInit)
+OpmSetPolicies()
 
 # not the same location as most of the other projects; this hook overrides
 macro (dir_hook)
@@ -97,3 +98,6 @@ if (HAVE_OPM_TESTS)
   # Regression test data available.  Enable additional tests.
   include (${CMAKE_CURRENT_SOURCE_DIR}/AcceptanceTests.cmake)
 endif()
+
+include_directories(${CMAKE_SOURCE_DIR}/../libecl/lib/include)
+include_directories(${CMAKE_SOURCE_DIR}/../libecl/build/lib/include)

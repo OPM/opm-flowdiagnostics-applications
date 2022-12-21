@@ -5,7 +5,7 @@ set (opm-flowdiagnostics-applications_CONFIG_VAR
 # Build prerequisites
 set (opm-flowdiagnostics-applications_DEPS
   # This module requires C++11 support, including std::regex
-  "CXX11Features REQUIRED"
+  #"CXX11Features REQUIRED"
   # We need Boost.Filesystem for advanced file handling
   #   filesystem::path
   #   filesystem::directory_iterator

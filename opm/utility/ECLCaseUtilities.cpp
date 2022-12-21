@@ -29,7 +29,6 @@
 #include <vector>
 
 #include <boost/filesystem.hpp>
-
 #include <ert/ecl/ecl_file.h>
 #include <ert/ecl/ecl_file_kw.h>
 #include <ert/ecl/ecl_file_view.h>
