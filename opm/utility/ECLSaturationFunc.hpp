@@ -94,6 +94,9 @@ namespace Opm {
 
                 /// Oil-Water subsystem
                 OilWater,
+
+                /// Gas-Water sybsystem
+                GasWater,
             };
 
             /// Which process does this request reference.

@@ -152,6 +152,21 @@ namespace {
         return (scaling.enable & T::Vertical) != 0;
     }
 
+    bool hasTabulatedGasSaturationFunctions(const std::vector<int>& tabdims)
+    {
+        return tabdims[TABDIMS_NSSGFN_ITEM] * tabdims[TABDIMS_NTSGFN_ITEM] > 0;
+    }
+
+    bool hasTabulatedOilSaturationFunctions(const std::vector<int>& tabdims)
+    {
+        return tabdims[TABDIMS_NSSOFN_ITEM] * tabdims[TABDIMS_NTSOFN_ITEM] > 0;
+    }
+
+    bool hasTabulatedWaterSaturationFunctions(const std::vector<int>& tabdims)
+    {
+        return tabdims[TABDIMS_NSSWFN_ITEM] * tabdims[TABDIMS_NTSWFN_ITEM] > 0;
+    }
+
     int saturationRegion(const ::Opm::ECLInitFileData&             init,
                          const ::Opm::ECLSaturationFunc::RawCurve& curve,
                          const std::string&                        gridID,
@@ -234,8 +249,8 @@ namespace {
             }
 
             std::vector<double>
-            pcgo(const std::size_t          regID,
-                 const std::vector<double>& sg) const
+            pcg(const std::size_t          regID,
+                const std::vector<double>& sg) const
             {
                 const auto t = this->table(regID);
                 const auto c = this->pccol();
@@ -1353,7 +1368,7 @@ private:
                     vertFuncVal(G, init, ep, opt, [&host]
                         (const int regID, const double sat) -> double
                     {
-                        return host.gas_->pcgo(regID, { sat })[0];
+                        return host.gas_->pcg(regID, { sat })[0];
                     });
 
                 eps.vertscaling = Create::Vertical::
@@ -1509,6 +1524,24 @@ private:
         const SatFuncScaling& scaling = SatFuncScaling{}) const;
 
     FlowDiagnostics::Graph
+    gasOilCurve(const RawCurve&                    func,
+                const SatFunc::CreateEPS::CurveSet curveSet,
+                const ECLInitFileData&             init,
+                const std::string&                 gridID,
+                const std::size_t                  activeCell,
+                const int                          satnum,
+                const SatFuncScaling&              scaling) const;
+
+    FlowDiagnostics::Graph
+    gasWaterCurve(const RawCurve&                    func,
+                  const SatFunc::CreateEPS::CurveSet curveSet,
+                  const ECLInitFileData&             init,
+                  const std::string&                 gridID,
+                  const std::size_t                  activeCell,
+                  const int                          satnum,
+                  const SatFuncScaling&              scaling) const;
+
+    FlowDiagnostics::Graph
     krgCurve(const SatFunc::CreateEPS::CurveSet curveSet,
              const ECLInitFileData&             init,
              const std::string&                 gridID,
@@ -1523,6 +1556,22 @@ private:
               const std::size_t                  activeCell,
               const int                          satnum,
               const SatFuncScaling&              scaling) const;
+
+    FlowDiagnostics::Graph
+    pcgwCurve(const SatFunc::CreateEPS::CurveSet curveSet,
+              const ECLInitFileData&             init,
+              const std::string&                 gridID,
+              const std::size_t                  activeCell,
+              const int                          satnum,
+              const SatFuncScaling&              scaling) const;
+
+    FlowDiagnostics::Graph
+    pcgCurve(const SatFunc::CreateEPS::CurveSet curveSet,
+             const ECLInitFileData&             init,
+             const std::string&                 gridID,
+             const std::size_t                  activeCell,
+             const int                          satnum,
+             const SatFuncScaling&              scaling) const;
 
     std::vector<double>
     krw(const ECLGraph&       G,
@@ -1718,31 +1767,31 @@ Impl::initRelPermInterp(const EPSEvaluator::ActPh& active,
     const auto& tabdims = init.keywordData<int>("TABDIMS");
     const auto& tab     = init.keywordData<double>("TAB");
 
-    if (active.gas) {
-        this->gas_.reset(new Gas::SatFunction(tabdims, tab, usys));
+    if (active.gas && hasTabulatedGasSaturationFunctions(tabdims)) {
+        this->gas_ = std::make_unique<Gas::SatFunction>(tabdims, tab, usys);
 
         this->setNumTables(this->gas_->numTables());
     }
 
-    if (active.wat) {
-        this->wat_.reset(new Water::SatFunction(tabdims, tab, usys));
+    if (active.wat && hasTabulatedWaterSaturationFunctions(tabdims)) {
+        this->wat_ = std::make_unique<Water::SatFunction>(tabdims, tab, usys);
 
         this->setNumTables(this->wat_->numTables());
     }
 
-    if (active.oil) {
+    if (active.oil && hasTabulatedOilSaturationFunctions(tabdims)) {
         if (! isThreePh) {
             using KrModel = Oil::TwoPhase;
 
-            if (active.gas) {
+            if (this->gas_ != nullptr) {
                 const auto subsys = KrModel::SubSys::OilGas;
 
-                this->oil_.reset(new KrModel(subsys, tabdims, tab));
+                this->oil_ = std::make_unique<KrModel>(subsys, tabdims, tab);
             }
-            else if (active.wat) {
+            else if (this->wat_ != nullptr) {
                 const auto subsys = KrModel::SubSys::OilWater;
 
-                this->oil_.reset(new KrModel(subsys, tabdims, tab));
+                this->oil_ = std::make_unique<KrModel>(subsys, tabdims, tab);
             }
             else {
                 throw std::invalid_argument {
@@ -1751,13 +1800,15 @@ Impl::initRelPermInterp(const EPSEvaluator::ActPh& active,
             }
         }
 
-        if (isThreePh) {
+        if (isThreePh && (this->wat_ != nullptr)) {
             using KrModel = Oil::ECLStdThreePhase;
 
-            this->oil_.reset(new KrModel(tabdims, tab, this->wat_->swco()));
+            this->oil_ = std::make_unique<KrModel>(tabdims, tab, this->wat_->swco());
         }
 
-        this->setNumTables(this->oil_->numTables());
+        if (this->oil_ != nullptr) {
+            this->setNumTables(this->oil_->numTables());
+        }
     }
 }
 
@@ -1853,11 +1904,8 @@ getSatFuncCurve(const std::vector<RawCurve>& func,
         switch (fi.thisPh) {
         case ECLPhaseIndex::Aqua:
         {
-            if (! (this->wat_ && (fi.subsys == RawCurve::SubSystem::OilWater)))
-            {
-                // Water is not an active phase, or we're being asked to
-                // extract a saturation function curve for water in the O/G
-                // subsystem.  No such curve.
+            if (!this->wat_) {
+                // Water is not an active phase.  No such curve.
                 graph.emplace_back();
                 continue;
             }
@@ -1878,6 +1926,15 @@ getSatFuncCurve(const std::vector<RawCurve>& func,
                 continue;
             }
 
+            if (((fi.subsys == RawCurve::SubSystem::OilGas) && !this->gas_) ||
+                ((fi.subsys == RawCurve::SubSystem::OilWater) && !this->wat_))
+            {
+                // Caller requests relative permeability for oil in an inactive
+                // two-phase system.  No such curve.
+                graph.emplace_back();
+                continue;
+            }
+
             const auto kro = this->kroCurve
                 (fi.subsys, crvSet, init, gridID, activeCell, satnum, scaling);
 
@@ -1893,20 +1950,21 @@ getSatFuncCurve(const std::vector<RawCurve>& func,
 
         case ECLPhaseIndex::Vapour:
         {
-            if (! (this->gas_ && (fi.subsys == RawCurve::SubSystem::OilGas)))
-            {
-                // Gas is not an active phase, or we're being asked to
-                // extract a saturation function curve for gas in the O/W
-                // subsystem.  No such curve.
+            if (!this->gas_) {
                 graph.emplace_back();
                 continue;
             }
 
-            auto crv = (fi.curve == RawCurve::Function::RelPerm)
-                ? this->krgCurve (crvSet, init, gridID, activeCell, satnum, scaling)
-                : this->pcgoCurve(crvSet, init, gridID, activeCell, satnum, scaling);
+            if (fi.subsys == RawCurve::SubSystem::OilGas) {
+                graph.push_back(this->gasOilCurve(fi, crvSet, init, gridID,
+                                                  activeCell, satnum, scaling));
+            }
 
-            graph.push_back(std::move(crv));
+            if (fi.subsys == RawCurve::SubSystem::GasWater) {
+                graph.push_back(this->gasWaterCurve(fi, crvSet, init, gridID,
+                                                    activeCell, satnum, scaling));
+
+            }
         }
         break;
 
@@ -2129,6 +2187,36 @@ krg(const ECLGraph&       G,
 
 Opm::FlowDiagnostics::Graph
 Opm::ECLSaturationFunc::Impl::
+gasOilCurve(const RawCurve&                    func,
+            const SatFunc::CreateEPS::CurveSet crvSet,
+            const ECLInitFileData&             init,
+            const std::string&                 gridID,
+            const std::size_t                  activeCell,
+            const int                          satnum,
+            const SatFuncScaling&              scaling) const
+{
+    return (func.curve == RawCurve::Function::RelPerm)
+        ? this->krgCurve(crvSet, init, gridID, activeCell, satnum, scaling)
+        : this->pcgoCurve(crvSet, init, gridID, activeCell, satnum, scaling);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+gasWaterCurve(const RawCurve&                    func,
+              const SatFunc::CreateEPS::CurveSet crvSet,
+              const ECLInitFileData&             init,
+              const std::string&                 gridID,
+              const std::size_t                  activeCell,
+              const int                          satnum,
+              const SatFuncScaling&              scaling) const
+{
+    return (func.curve == RawCurve::Function::RelPerm)
+        ? this->krgCurve(crvSet, init, gridID, activeCell, satnum, scaling)
+        : this->pcgwCurve(crvSet, init, gridID, activeCell, satnum, scaling);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
 krgCurve(const SatFunc::CreateEPS::CurveSet curveSet,
          const ECLInitFileData&             init,
          const std::string&                 gridID,
@@ -2231,10 +2319,43 @@ pcgoCurve(const SatFunc::CreateEPS::CurveSet curveSet,
           const int                          satnum,
           const SatFuncScaling&              scaling) const
 {
-    if (! this->gas_) {
+    if ((this->gas_ == nullptr) ||
+        ((this->oil_ == nullptr) && (this->wat_ != nullptr)))
+    {
+        // No Pcgo curve if gas not active or oil not active but water is.
         return FlowDiagnostics::Graph{};
     }
 
+    return this->pcgCurve(curveSet, init, gridID, activeCell, satnum, scaling);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+pcgwCurve(const SatFunc::CreateEPS::CurveSet curveSet,
+          const ECLInitFileData&             init,
+          const std::string&                 gridID,
+          const std::size_t                  activeCell,
+          const int                          satnum,
+          const SatFuncScaling&              scaling) const
+{
+    if (!this->gas_ || !this->wat_ || this->oil_) {
+        // G/W system not applicable if oil active or if one or
+        // both of the gas and water phases are *not* active.
+        return FlowDiagnostics::Graph{};
+    }
+
+    return this->pcgCurve(curveSet, init, gridID, activeCell, satnum, scaling);
+}
+
+Opm::FlowDiagnostics::Graph
+Opm::ECLSaturationFunc::Impl::
+pcgCurve(const SatFunc::CreateEPS::CurveSet curveSet,
+         const ECLInitFileData&             init,
+         const std::string&                 gridID,
+         const std::size_t                  activeCell,
+         const int                          satnum,
+         const SatFuncScaling&              scaling) const
+{
     auto opt = SatFunc::CreateEPS::EPSOptions{};
 
     opt.use3PtScaling = this->use3PtScaling_;
@@ -2284,14 +2405,14 @@ pcgoCurve(const SatFunc::CreateEPS::CurveSet curveSet,
     const auto nPoints = abscissas.size();
 
     // Subtract one from SATNUM to create valid table index.
-    auto pc = this->gas_->pcgo(satnum - 1, sg_lookup);
+    auto pc = this->gas_->pcg(satnum - 1, sg_lookup);
 
     if (enableVerticalSFScaling(scaling)) {
         const auto fvals = SatFunc::CreateEPS::Vertical::
             unscaledFunctionValues(init, gridID, satnum, *this->tep_, opt,
                 [this](const int satreg, const double s)
             {
-                return this->gas_->pcgo(satreg, std::vector<double>{s}).front();
+                return this->gas_->pcg(satreg, std::vector<double>{s}).front();
             });
 
         auto eps = SatFunc::CreateEPS::Vertical::
@@ -2467,7 +2588,7 @@ pcowCurve(const SatFunc::CreateEPS::CurveSet curveSet,
           const int                          satnum,
           const SatFuncScaling&              scaling) const
 {
-    if (! this->wat_) {
+    if (!this->wat_ || !this->oil_) {
         return FlowDiagnostics::Graph{};
     }
 
@@ -2654,7 +2775,7 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active)
 
 	this->tep_ = std::make_unique<RawTEP>();
 
-    if (active.oil) {
+    if (active.oil && (this->oil_ != nullptr)) {
         this->tep_->conn.oil          = this->oil_->soco();
         this->tep_->crit.oil_in_gas   = this->oil_->sogcr();
         this->tep_->crit.oil_in_water = this->oil_->sowcr();
@@ -2667,7 +2788,7 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active)
         this->tep_->smax.oil          = zero;
     }
 
-    if (active.gas) {
+    if (active.gas && (this->gas_ != nullptr)) {
         this->tep_->conn.gas = this->gas_->sgco();
         this->tep_->crit.gas = this->gas_->sgcr();
         this->tep_->smax.gas = this->gas_->sgmax();
@@ -2678,7 +2799,7 @@ extractRawTableEndPoints(const EPSEvaluator::ActPh& active)
         this->tep_->smax.gas = zero;
     }
 
-    if (active.wat) {
+    if (active.wat && (this->wat_ != nullptr)) {
         this->tep_->conn.water = this->wat_->swco();
         this->tep_->crit.water = this->wat_->swcr();
         this->tep_->smax.water = this->wat_->swmax();

@@ -244,6 +244,32 @@ namespace {
         printGraph(std::cout, "Sg", curveName(curveSet, "Pcgo"), graph);
     }
 
+    void pcgw(const Opm::ECLSaturationFunc&                 sfunc,
+              const Opm::ECLInitFileData&                   init,
+              const std::string&                            gridID,
+              const int                                     activeCell,
+              const Opm::ECLSaturationFunc::SatFuncScaling& scaling,
+              const CurveSet                                curveSet)
+    {
+        using RC = Opm::ECLSaturationFunc::RawCurve;
+
+        auto func = std::vector<RC>{};
+        func.reserve(1);
+
+        // Request pcgw (gas/water capillary pressure (Pg-Pw) in G/W system)
+        func.push_back(RC{
+            RC::Function::CapPress,
+            RC::SubSystem::GasWater,
+            Opm::ECLPhaseIndex::Vapour,
+            curveSet,
+        });
+
+        const auto graph = sfunc
+            .getSatFuncCurve(func, init, gridID, activeCell, scaling);
+
+        printGraph(std::cout, "Sg", curveName(curveSet, "Pcgw"), graph);
+    }
+
     void pcow(const Opm::ECLSaturationFunc&                 sfunc,
               const Opm::ECLInitFileData&                   init,
               const std::string&                            gridID,
@@ -456,7 +482,8 @@ try {
     const auto gridID = prm.getDefault("gridName", std::string{});
     const auto cellID = getActiveCell(init, rset, prm);
 
-    const auto pvtNum = init.keywordData<int>("PVTNUM", gridID)[cellID];
+    const auto pvtNum = init.haveKeywordData("PVTNUM")
+        ? init .keywordData<int>("PVTNUM", gridID)[cellID] : 1;
     const auto haveHyst = init.haveHysteresis();
 
     auto sfunc = Opm::ECLSaturationFunc(init);
@@ -540,6 +567,19 @@ try {
         }
         else {
             std::cerr << "IPcog not available in this result set\n";
+        }
+    }
+
+    if (prm.getDefault("pcgw", false)) {
+        pcgw(sfunc, init, gridID, cellID, scaling, CurveSet::Drainage);
+    }
+
+    if (prm.getDefault("ipcgw", false)) {
+        if (haveHyst) {
+            pcgw(sfunc, init, gridID, cellID, scaling, CurveSet::Imbibition);
+        }
+        else {
+            std::cerr << "IPcgw not available in this result set\n";
         }
     }
 
